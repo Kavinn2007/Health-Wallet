@@ -6,6 +6,8 @@
   "description": "Health Wallet - Secure Digital Health Record & Healthcare Connectivity Platform",
   "scripts": {
     "dev": "node server.js",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
     "start": "node server.js",
     "test": "node test_runner.js"
   },
