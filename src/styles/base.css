@@ -1,0 +1,270 @@
+@import './variables.css';
+
+/* =============================================================
+   Global Reset & Base Typography — SIH 2026 Minimal Healthcare
+   ============================================================= */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 15px;
+  scroll-behavior: smooth;
+  color-scheme: light;
+  background-color: var(--bg-canvas);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Minimal Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Universal SVG Icon Utility Sizing (Strictly prevents icon explosion) */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+svg.w-3\.5, .w-3\.5 { width: 14px !important; height: 14px !important; max-width: 14px; max-height: 14px; }
+svg.w-4, .w-4 { width: 16px !important; height: 16px !important; max-width: 16px; max-height: 16px; }
+svg.w-4\.5, .w-4\.5 { width: 18px !important; height: 18px !important; max-width: 18px; max-height: 18px; }
+svg.w-5, .w-5 { width: 18px !important; height: 18px !important; max-width: 18px; max-height: 18px; }
+svg.w-6, .w-6 { width: 22px !important; height: 22px !important; max-width: 22px; max-height: 22px; }
+svg.w-7, .w-7 { width: 26px !important; height: 26px !important; max-width: 26px; max-height: 26px; }
+svg.w-8, .w-8 { width: 32px !important; height: 32px !important; max-width: 32px; max-height: 32px; }
+
+/* Typography Hierarchy (Government Digital Service Standard) */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; } /* ~26-28px */
+h2 { font-size: 1.35rem; font-weight: 600; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+h4 { font-size: 0.95rem; font-weight: 600; }
+
+p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+a {
+  color: var(--primary-green);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--dark-green);
+}
+
+/* Form Controls & Inputs */
+input, select, textarea {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  background: #FFFDFC;
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-input);
+  padding: 0.625rem 0.875rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(20, 90, 58, 0.12);
+}
+
+label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+/* Standard Solid Card (Strictly NO Glassmorphism, NO blur, NO HUD) */
+.card, .glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  position: relative;
+}
+
+.card:hover, .glass-card:hover {
+  border-color: var(--green-accent-subtle);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Interactive Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-btn);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: scale(0.99);
+}
+
+/* Primary Button: Deep green background, crisp white text */
+.btn-primary {
+  background: var(--primary-green);
+  color: #FFFDFC;
+  border: 1px solid var(--primary-green);
+}
+
+.btn-primary:hover {
+  background: var(--dark-green);
+  border-color: var(--dark-green);
+  color: #FFFDFC;
+}
+
+/* Secondary Button: White card surface, deep green text, subtle border */
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--primary-green);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--very-light-green);
+  border-color: var(--primary-green);
+  color: var(--dark-green);
+}
+
+/* Ghost Button: Minimal transparent */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--very-light-green);
+  color: var(--text-primary);
+}
+
+/* Emergency Button: Restrained, non-neon red */
+.btn-emergency {
+  background: var(--color-danger);
+  color: #FFFDFC;
+  border: 1px solid var(--color-danger);
+}
+
+.btn-emergency:hover {
+  background: #992626;
+  border-color: #992626;
+  color: #FFFDFC;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-btn);
+}
+
+/* Badges & Status Indicators */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge-verified {
+  background: var(--light-green);
+  color: var(--dark-green);
+  border: 1px solid var(--green-accent-subtle);
+}
+
+.badge-unverified {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
+}
+
+.badge-sensitive {
+  background: #FAF3F0;
+  color: #8C3E20;
+  border: 1px solid #EED8CF;
+}
+
+.badge-emergency {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+}
+
+.badge-neutral {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Simple Micro-Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-base) ease-out forwards;
+}

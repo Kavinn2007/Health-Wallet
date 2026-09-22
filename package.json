@@ -1,0 +1,15 @@
+{
+  "name": "health-wallet",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Health Wallet - Secure Digital Health Record & Healthcare Connectivity Platform",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "test": "node test_runner.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.115.0"
+  }
+}
