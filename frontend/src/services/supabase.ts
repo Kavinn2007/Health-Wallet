@@ -85,6 +85,28 @@ export interface AccessRequest {
   created_at: string;
   updated_at: string;
   patient?: MinimalPatientInfo;
+  doctor?: DoctorProfile;
+}
+
+export type ConsentStatus = 'APPROVED' | 'DENIED' | 'REVOKED' | 'EXPIRED';
+
+export interface Consent {
+  id: string;
+  access_request_id: string;
+  patient_id: string;
+  doctor_user_id: string;
+  doctor_profile_id?: string;
+  approved_record_types: RecordCategory[];
+  status: ConsentStatus;
+  approved_at?: string;
+  expires_at: string;
+  revoked_at?: string;
+  denied_at?: string;
+  denial_reason?: string;
+  created_at: string;
+  updated_at: string;
+  doctor?: DoctorProfile;
+  patient?: MinimalPatientInfo;
 }
 
 export const DOCTOR_SPECIALIZATIONS = [

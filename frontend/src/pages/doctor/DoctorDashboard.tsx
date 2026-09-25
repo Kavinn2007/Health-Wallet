@@ -44,7 +44,15 @@ export const DoctorDashboard: React.FC = () => {
   }, []);
 
   const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
-  const approvedCount = requests.filter((r) => r.status === 'APPROVED').length;
+  const approvedCount = requests.filter(
+    (r) => r.status === 'APPROVED' && new Date(r.expires_at).getTime() > Date.now()
+  ).length;
+  const deniedCount = requests.filter((r) => r.status === 'DENIED').length;
+  const expiredCount = requests.filter(
+    (r) =>
+      r.status === 'EXPIRED' ||
+      (r.status === 'APPROVED' && new Date(r.expires_at).getTime() <= Date.now())
+  ).length;
 
   const handleQuickSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +110,7 @@ export const DoctorDashboard: React.FC = () => {
       <div className="bg-gradient-to-r from-sky-900 to-indigo-950 rounded-2xl p-6 text-white shadow-md">
         <div className="max-w-2xl space-y-3">
           <h2 className="text-lg font-bold tracking-tight">
-            Patient Identity & Consent Verification
+            Patient Identity &amp; Consent Verification
           </h2>
           <p className="text-xs text-sky-200 leading-relaxed">
             Enter a patient&apos;s verified Health Wallet ID to look up minimal identity and initiate consent-gated medical access requests.
@@ -130,69 +138,66 @@ export const DoctorDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Metric Cards / Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Quick Action: Find Patient */}
-        <Link
-          to="/doctor/patients"
-          className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-sky-300 hover:shadow-md transition-all group"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Users className="w-5 h-5" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition-colors" />
-          </div>
-          <div className="mt-4">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-sky-600 transition-colors">
-              Find Patient
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Search by Health Wallet ID to view minimal identity and request access.
-            </p>
-          </div>
-        </Link>
-
-        {/* Quick Action: Pending Access Requests */}
+      {/* Metric Cards / Quick Actions (4 Columns for Real Consent Stats) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Pending Requests */}
         <Link
           to="/doctor/access-requests"
-          className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-amber-300 hover:shadow-md transition-all group"
+          className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-amber-300 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
-              <KeyRound className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <KeyRound className="w-4 h-4" />
             </div>
-            <span className="font-bold text-sm px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
-              {pendingCount} Pending
-            </span>
+            <span className="font-extrabold text-base text-amber-900">{pendingCount}</span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
-              Pending Access Requests
+          <div className="mt-3">
+            <h3 className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+              Pending Requests
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Review active requests awaiting patient consent approval.
-            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Awaiting patient consent</p>
           </div>
         </Link>
 
-        {/* Metric: Approved Access */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+        {/* Approved Consents */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <FileCheck2 className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <FileCheck2 className="w-4 h-4" />
             </div>
-            <span className="font-bold text-sm px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              {approvedCount} Approved
-            </span>
+            <span className="font-extrabold text-base text-emerald-900">{approvedCount}</span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-sm font-bold text-slate-900">
-              Approved Consents
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Active patient permissions (handled in Phase 6 consent system).
-            </p>
+          <div className="mt-3">
+            <h3 className="text-xs font-bold text-slate-900">Approved Access</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">Active consent windows</p>
+          </div>
+        </div>
+
+        {/* Denied Requests */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <span className="font-extrabold text-base text-rose-900">{deniedCount}</span>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-bold text-slate-900">Denied Requests</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">Declined by patient</p>
+          </div>
+        </div>
+
+        {/* Expired Access */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+              <Activity className="w-4 h-4" />
+            </div>
+            <span className="font-extrabold text-base text-slate-800">{expiredCount}</span>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-bold text-slate-900">Expired Access</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">Time window elapsed</p>
           </div>
         </div>
       </div>

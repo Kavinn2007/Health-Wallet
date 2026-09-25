@@ -25,11 +25,14 @@ import {
   getPatientMedicalRecords,
   type MedicalRecord,
 } from '../services/healthRecords';
+import { getPatientAccessRequests } from '../services/consent';
+import { KeyRound, Stethoscope } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { profile } = useAuth();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState<boolean>(true);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
 
   const patientName = profile?.patient_name || 'Verified Patient';
   const healthWalletId = profile?.health_wallet_id || 'HW-TN-XXXXXXXX';
@@ -49,9 +52,14 @@ export const Dashboard: React.FC = () => {
         return;
       }
       try {
-        const res = await getPatientMedicalRecords(profile.id);
-        if (isMounted && res.data) {
-          setRecords(res.data);
+        const [recordsRes, reqs] = await Promise.all([
+          getPatientMedicalRecords(profile.id),
+          getPatientAccessRequests(profile.id),
+        ]);
+        if (isMounted) {
+          if (recordsRes.data) setRecords(recordsRes.data);
+          const pending = reqs.filter((r) => r.status === 'PENDING').length;
+          setPendingRequestsCount(pending);
         }
       } catch (err) {
         console.warn('Dashboard records fetch error:', err);
@@ -136,6 +144,47 @@ export const Dashboard: React.FC = () => {
         {/* Subtle background decorative shapes */}
         <div className="absolute right-0 -bottom-10 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* Doctor Access Requests Notification Card */}
+      {pendingRequestsCount > 0 ? (
+        <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">Doctor Access Requests</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900">
+                  {pendingRequestsCount} Pending
+                </span>
+              </div>
+              <p className="text-xs text-amber-900/90 mt-0.5">
+                {pendingRequestsCount} doctor{pendingRequestsCount > 1 ? 's are' : ' is'} requesting access to your medical records
+              </p>
+            </div>
+          </div>
+          <Link to="/access-requests">
+            <PrimaryButton size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+              Review Requests
+            </PrimaryButton>
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 px-4 shadow-xs flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-slate-600">
+            <KeyRound className="w-4 h-4 text-slate-400" />
+            <div>
+              <span className="font-bold text-slate-800">Doctor Access Requests: </span>
+              <span className="text-slate-500">No pending access requests</span>
+            </div>
+          </div>
+          <Link to="/access-requests" className="text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
+            <span>Manage Consents</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
 
       {/* Key Metric Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

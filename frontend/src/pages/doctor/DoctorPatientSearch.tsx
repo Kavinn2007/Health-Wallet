@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   Search,
   Lock,
@@ -11,9 +11,13 @@ import {
   ArrowRight,
   Shield,
   Stethoscope,
+  Clock,
+  CheckCircle2,
+  FileText,
 } from 'lucide-react';
 import { searchPatientByHealthWalletId } from '../../services/doctors';
-import { type MinimalPatientInfo } from '../../services/supabase';
+import { getDoctorConsentStatus } from '../../services/consent';
+import { type MinimalPatientInfo, type ConsentStatus, type RecordCategory } from '../../services/supabase';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { AccessRequestModal } from '../../components/doctor/AccessRequestModal';
 
@@ -26,6 +30,28 @@ export const DoctorPatientSearch: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+
+  // Consent Status State
+  const [consentInfo, setConsentInfo] = useState<{
+    hasConsent: boolean;
+    status: ConsentStatus | 'NONE';
+    approvedRecordTypes: RecordCategory[];
+    expiresAt?: string;
+  }>({
+    hasConsent: false,
+    status: 'NONE',
+    approvedRecordTypes: [],
+  });
+
+  const checkConsent = async (patId: string) => {
+    const res = await getDoctorConsentStatus(patId);
+    setConsentInfo({
+      hasConsent: res.hasConsent,
+      status: res.status,
+      approvedRecordTypes: res.approvedRecordTypes,
+      expiresAt: res.expiresAt,
+    });
+  };
 
   const executeSearch = async (idToSearch: string) => {
     const cleanId = idToSearch.trim();
@@ -47,9 +73,15 @@ export const DoctorPatientSearch: React.FC = () => {
     if (res.success && res.patient) {
       setSearchResult(res.patient);
       setErrorMessage('');
+      await checkConsent(res.patient.id);
     } else {
       setSearchResult(null);
       setErrorMessage(res.error || 'Patient not found');
+      setConsentInfo({
+        hasConsent: false,
+        status: 'NONE',
+        approvedRecordTypes: [],
+      });
     }
   };
 
@@ -161,12 +193,20 @@ export const DoctorPatientSearch: React.FC = () => {
               </div>
 
               <div>
-                <PrimaryButton
-                  onClick={() => setIsModalOpen(true)}
-                  icon={<KeyRound className="w-4 h-4" />}
-                >
-                  Request Medical Access
-                </PrimaryButton>
+                {consentInfo.hasConsent ? (
+                  <Link to={`/doctor/patients/${searchResult.id}/records`}>
+                    <PrimaryButton icon={<FileText className="w-4 h-4" />}>
+                      View Authorized Records
+                    </PrimaryButton>
+                  </Link>
+                ) : (
+                  <PrimaryButton
+                    onClick={() => setIsModalOpen(true)}
+                    icon={<KeyRound className="w-4 h-4" />}
+                  >
+                    Request Medical Access
+                  </PrimaryButton>
+                )}
               </div>
             </div>
 
@@ -211,52 +251,132 @@ export const DoctorPatientSearch: React.FC = () => {
             </div>
           </div>
 
-          {/* PROTECTED MEDICAL RECORDS SECTION (GATED) */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-xs text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-2xs">
-              <FileLock2 className="w-7 h-7" />
-            </div>
+          {/* MEDICAL RECORDS SECTION: GATED OR UNLOCKED */}
+          {consentInfo.hasConsent ? (
+            /* UNLOCKED WITH ACTIVE CONSENT */
+            <div className="bg-white border border-emerald-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-slate-900">
+                        Medical Records: Access Granted
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        APPROVED
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      The patient has granted verified consent to view selected clinical categories.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="space-y-1.5 max-w-md mx-auto">
-              <h3 className="text-base font-bold text-slate-900">
-                Medical Records: Access Required
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Patient consent is required before viewing medical records. Consultations, diagnoses, treatments, prescriptions, and lab reports are strictly locked.
-              </p>
-            </div>
-
-            {requestSent ? (
-              <div className="p-3.5 max-w-md mx-auto bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span>Access Request Submitted • Awaiting Patient Consent (PENDING)</span>
+                <Link to={`/doctor/patients/${searchResult.id}/records`}>
+                  <PrimaryButton icon={<ArrowRight className="w-4 h-4" />}>
+                    Open Authorized Records
+                  </PrimaryButton>
+                </Link>
               </div>
-            ) : (
-              <div className="pt-2">
-                <PrimaryButton
-                  onClick={() => setIsModalOpen(true)}
-                  icon={<KeyRound className="w-4 h-4" />}
-                >
-                  Request Medical Access
-                </PrimaryButton>
-              </div>
-            )}
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-center gap-6 text-[11px] text-slate-400">
-              <span className="flex items-center gap-1">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                No Consultations Exposed
-              </span>
-              <span className="flex items-center gap-1">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                No Lab Reports Exposed
-              </span>
-              <span className="flex items-center gap-1">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                No Prescriptions Exposed
-              </span>
+              {/* Authorized categories badges */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-slate-500 font-semibold block text-[11px]">
+                  Authorized Record Categories:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {consentInfo.approvedRecordTypes.map((cat) => (
+                    <span
+                      key={cat}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"
+                    >
+                      ✓ {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {consentInfo.expiresAt && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>
+                    Access Window Expires:{' '}
+                    <strong>
+                      {new Date(consentInfo.expiresAt).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </strong>
+                  </span>
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            /* LOCKED / ACCESS REQUIRED / PENDING */
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-xs text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-2xs">
+                <FileLock2 className="w-7 h-7" />
+              </div>
+
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h3 className="text-base font-bold text-slate-900">
+                  {consentInfo.status === 'EXPIRED'
+                    ? 'Consent Expired'
+                    : consentInfo.status === 'REVOKED'
+                    ? 'Access Revoked'
+                    : consentInfo.status === 'DENIED'
+                    ? 'Access Denied'
+                    : 'Medical Records: Access Required'}
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {consentInfo.status === 'EXPIRED'
+                    ? 'The previous consent window for this patient has expired. Submit a new request to regain access.'
+                    : consentInfo.status === 'REVOKED'
+                    ? 'The patient has revoked authorization for viewing their records.'
+                    : consentInfo.status === 'DENIED'
+                    ? 'The patient declined your previous access request.'
+                    : 'Patient consent is required before viewing medical records. Consultations, diagnoses, treatments, prescriptions, and lab reports are strictly locked.'}
+                </p>
+              </div>
+
+              {requestSent ? (
+                <div className="p-3.5 max-w-md mx-auto bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  <span>Access Request Submitted • Awaiting Patient Consent (PENDING)</span>
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <PrimaryButton
+                    onClick={() => setIsModalOpen(true)}
+                    icon={<KeyRound className="w-4 h-4" />}
+                  >
+                    Request Medical Access
+                  </PrimaryButton>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-center gap-6 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  No Consultations Exposed
+                </span>
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  No Lab Reports Exposed
+                </span>
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  No Prescriptions Exposed
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Access Request Modal */}
           <AccessRequestModal
@@ -265,6 +385,9 @@ export const DoctorPatientSearch: React.FC = () => {
             onClose={() => setIsModalOpen(false)}
             onRequestSubmitted={() => {
               setRequestSent(true);
+              if (searchResult) {
+                checkConsent(searchResult.id);
+              }
             }}
           />
         </div>

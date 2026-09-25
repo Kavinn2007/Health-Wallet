@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   X,
+  KeyRound,
 } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -43,6 +44,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose, isMobile = false }) =
       icon: <ScanLine className="w-4 h-4" />,
       badge: 'AI Ready',
       badgeVariant: 'sky',
+    },
+    {
+      to: '/access-requests',
+      label: 'Access Requests',
+      icon: <KeyRound className="w-4 h-4" />,
     },
     {
       to: '/medicines',
