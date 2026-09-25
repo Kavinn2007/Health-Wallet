@@ -79,11 +79,38 @@ export interface LabReport {
   updated_at: string;
 }
 
+export interface Diagnosis {
+  id: string;
+  patient_id: string;
+  medical_record_id: string;
+  diagnosis_name: string;
+  diagnosis_date: string;
+  provider?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Treatment {
+  id: string;
+  patient_id: string;
+  medical_record_id: string;
+  treatment_name: string;
+  treatment_date: string;
+  provider?: string;
+  care_plan?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MedicalRecordDetail {
   record: MedicalRecord;
   consultation?: Consultation;
   prescription?: Prescription;
   labReport?: LabReport;
+  diagnosis?: Diagnosis;
+  treatment?: Treatment;
   signedDocumentUrl?: string;
 }
 
@@ -337,6 +364,8 @@ export async function getMedicalRecordDetail(
           consultation: subDetails?.consultation,
           prescription: subDetails?.prescription,
           labReport: subDetails?.labReport,
+          diagnosis: subDetails?.diagnosis,
+          treatment: subDetails?.treatment,
           signedDocumentUrl: signedDocUrl || undefined,
         },
       };
@@ -383,6 +412,22 @@ export async function getMedicalRecordDetail(
         .maybeSingle();
 
       if (labData) detail.labReport = labData as LabReport;
+    } else if (recordType === 'DIAGNOSIS') {
+      const { data: diagData } = await supabase
+        .from('diagnoses')
+        .select('*')
+        .eq('medical_record_id', recordId)
+        .maybeSingle();
+
+      if (diagData) detail.diagnosis = diagData as Diagnosis;
+    } else if (recordType === 'TREATMENT') {
+      const { data: treatData } = await supabase
+        .from('treatments')
+        .select('*')
+        .eq('medical_record_id', recordId)
+        .maybeSingle();
+
+      if (treatData) detail.treatment = treatData as Treatment;
     }
 
     return { data: detail };

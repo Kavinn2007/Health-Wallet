@@ -19,6 +19,7 @@ import { searchPatientByHealthWalletId } from '../../services/doctors';
 import { getDoctorConsentStatus } from '../../services/consent';
 import { type MinimalPatientInfo, type ConsentStatus, type RecordCategory } from '../../services/supabase';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { SecondaryButton } from '../../components/ui/SecondaryButton';
 import { AccessRequestModal } from '../../components/doctor/AccessRequestModal';
 
 export const DoctorPatientSearch: React.FC = () => {
@@ -275,11 +276,18 @@ export const DoctorPatientSearch: React.FC = () => {
                   </div>
                 </div>
 
-                <Link to={`/doctor/patients/${searchResult.id}/records`}>
-                  <PrimaryButton icon={<ArrowRight className="w-4 h-4" />}>
-                    Open Authorized Records
-                  </PrimaryButton>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link to={`/doctor/patients/${searchResult.id}/records`}>
+                    <SecondaryButton>
+                      View Records
+                    </SecondaryButton>
+                  </Link>
+                  <Link to={`/doctor/patients/${searchResult.id}/clinical`}>
+                    <PrimaryButton icon={<ArrowRight className="w-4 h-4" />}>
+                      Clinical Workspace
+                    </PrimaryButton>
+                  </Link>
+                </div>
               </div>
 
               {/* Authorized categories badges */}

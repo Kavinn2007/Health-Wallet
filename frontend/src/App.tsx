@@ -25,6 +25,7 @@ import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
 import { DoctorPatientSearch } from './pages/doctor/DoctorPatientSearch';
 import { DoctorAccessRequests } from './pages/doctor/DoctorAccessRequests';
 import { DoctorPatientRecords } from './pages/doctor/DoctorPatientRecords';
+import { DoctorClinicalWorkspace } from './pages/doctor/DoctorClinicalWorkspace';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
 
 export function App() {
@@ -62,6 +63,7 @@ export function App() {
               <Route path="dashboard" element={<DoctorDashboard />} />
               <Route path="patients" element={<DoctorPatientSearch />} />
               <Route path="patients/:patientId/records" element={<DoctorPatientRecords />} />
+              <Route path="patients/:patientId/clinical" element={<DoctorClinicalWorkspace />} />
               <Route path="access-requests" element={<DoctorAccessRequests />} />
               <Route path="profile" element={<DoctorProfilePage />} />
             </Route>

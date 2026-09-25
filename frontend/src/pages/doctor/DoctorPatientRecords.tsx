@@ -106,6 +106,13 @@ export const DoctorPatientRecords: React.FC = () => {
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Patient Search</span>
         </Link>
+        <Link
+          to={`/doctor/patients/${patientId}/clinical`}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors"
+        >
+          <Stethoscope className="w-4 h-4" />
+          <span>Open Clinical Workspace →</span>
+        </Link>
       </div>
 
       {/* ERROR / ACCESS RESTRICTED SCREEN */}
