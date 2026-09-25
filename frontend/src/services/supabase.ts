@@ -28,6 +28,85 @@ export interface PatientRegistrationInput {
   password: string;
 }
 
+export interface DoctorProfile {
+  id: string;
+  user_id: string;
+  doctor_name: string;
+  registration_number: string;
+  specialization: string;
+  hospital_name: string;
+  mobile_number: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DoctorRegistrationInput {
+  doctorName: string;
+  registrationNumber: string;
+  specialization: string;
+  hospitalName: string;
+  mobileNumber: string;
+  username: string;
+  password: string;
+}
+
+export interface MinimalPatientInfo {
+  id: string;
+  patient_name: string;
+  health_wallet_id: string;
+  blood_group: string;
+  state: string;
+}
+
+export type AccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED' | 'REVOKED' | 'EXPIRED';
+
+export type RecordCategory =
+  | 'CONSULTATIONS'
+  | 'DIAGNOSES'
+  | 'TREATMENTS'
+  | 'PRESCRIPTIONS'
+  | 'LAB_REPORTS'
+  | 'IMAGING'
+  | 'ALL_RECORDS';
+
+export interface AccessRequest {
+  id: string;
+  patient_id: string;
+  requester_user_id: string;
+  doctor_profile_id?: string;
+  requester_role: 'DOCTOR';
+  requested_record_types: RecordCategory[];
+  reason: string;
+  status: AccessRequestStatus;
+  duration_hours: number;
+  requested_at: string;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  patient?: MinimalPatientInfo;
+}
+
+export const DOCTOR_SPECIALIZATIONS = [
+  'General Medicine',
+  'Internal Medicine',
+  'Cardiology',
+  'Pediatrics',
+  'Orthopedics',
+  'Neurology',
+  'Dermatology',
+  'Obstetrics & Gynecology',
+  'Oncology',
+  'ENT (Otolaryngology)',
+  'Ophthalmology',
+  'Pulmonology',
+  'Gastroenterology',
+  'Endocrinology',
+  'Psychiatry',
+  'General Surgery',
+  'Emergency Medicine',
+] as const;
+
 export const INDIAN_STATES: { name: string; code: string }[] = [
   { name: 'Andhra Pradesh', code: 'AP' },
   { name: 'Arunachal Pradesh', code: 'AR' },

@@ -1,30 +1,71 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Shield,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Copy,
+  Check,
+  Stethoscope,
+  Building2,
+  FileCheck,
+} from 'lucide-react';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
-import { useAuth } from '../context/AuthContext';
-import { INDIAN_STATES, BLOOD_GROUPS, GENDERS, type PatientProfile } from '../services/supabase';
+import { useAuth, type UserRole } from '../context/AuthContext';
+import {
+  INDIAN_STATES,
+  BLOOD_GROUPS,
+  GENDERS,
+  DOCTOR_SPECIALIZATIONS,
+  type PatientProfile,
+  type DoctorProfile,
+} from '../services/supabase';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register, isConfigured } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { register, registerDoctor, isConfigured } = useAuth();
 
-  // The EXACT 9 patient fields:
+  // Tab State: PATIENT vs DOCTOR
+  const initialRole = searchParams.get('role')?.toUpperCase() === 'DOCTOR' ? 'DOCTOR' : 'PATIENT';
+  const [roleTab, setRoleTab] = useState<UserRole>(initialRole);
+
+  useEffect(() => {
+    if (searchParams.get('role')?.toUpperCase() === 'DOCTOR') {
+      setRoleTab('DOCTOR');
+    }
+  }, [searchParams]);
+
+  // PATIENT FIELDS
   const [patientName, setPatientName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [bloodGroup, setBloodGroup] = useState<typeof BLOOD_GROUPS[number]>('B+');
   const [gender, setGender] = useState<typeof GENDERS[number]>('Female');
   const [stateName, setStateName] = useState('Tamil Nadu');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [patientUsername, setPatientUsername] = useState('');
+  const [patientPassword, setPatientPassword] = useState('');
+  const [patientConfirmPassword, setPatientConfirmPassword] = useState('');
+
+  // DOCTOR FIELDS
+  const [doctorName, setDoctorName] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+  const [specialization, setSpecialization] = useState<string>(DOCTOR_SPECIALIZATIONS[0]);
+  const [hospitalName, setHospitalName] = useState('');
+  const [doctorMobile, setDoctorMobile] = useState('');
+  const [doctorUsername, setDoctorUsername] = useState('');
+  const [doctorPassword, setDoctorPassword] = useState('');
+  const [doctorConfirmPassword, setDoctorConfirmPassword] = useState('');
 
   // UI state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdProfile, setCreatedProfile] = useState<PatientProfile | null>(null);
+  const [createdPatient, setCreatedPatient] = useState<PatientProfile | null>(null);
+  const [createdDoctor, setCreatedDoctor] = useState<DoctorProfile | null>(null);
   const [copiedHwId, setCopiedHwId] = useState(false);
 
   // Format Aadhaar with spaces (#### #### ####)
@@ -37,8 +78,8 @@ export const Register: React.FC = () => {
     ? aadhaarNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
     : '';
 
-  // Validation function
-  const validate = (): boolean => {
+  // Validate Patient
+  const validatePatient = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!patientName.trim()) {
@@ -58,7 +99,7 @@ export const Register: React.FC = () => {
       errors.aadhaarNumber = 'Aadhaar Number must be exactly 12 digits.';
     }
 
-    const cleanUser = username.trim().toLowerCase();
+    const cleanUser = patientUsername.trim().toLowerCase();
     if (!cleanUser) {
       errors.username = 'Username is required.';
     } else if (cleanUser.length < 3) {
@@ -67,13 +108,13 @@ export const Register: React.FC = () => {
       errors.username = 'Username can only contain lowercase letters, numbers, and _.-';
     }
 
-    if (!password) {
+    if (!patientPassword) {
       errors.password = 'Password is required.';
-    } else if (password.length < 8) {
+    } else if (patientPassword.length < 8) {
       errors.password = 'Password must be at least 8 characters long.';
     }
 
-    if (password !== confirmPassword) {
+    if (patientPassword !== patientConfirmPassword) {
       errors.confirmPassword = 'Passwords do not match.';
     }
 
@@ -81,16 +122,64 @@ export const Register: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Validate Doctor
+  const validateDoctor = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!doctorName.trim()) {
+      errors.doctorName = 'Doctor Name is required.';
+    }
+
+    const cleanReg = registrationNumber.trim().toUpperCase();
+    if (!cleanReg) {
+      errors.registrationNumber = 'Medical Registration Number is required.';
+    }
+
+    if (!specialization.trim()) {
+      errors.specialization = 'Specialization is required.';
+    }
+
+    if (!hospitalName.trim()) {
+      errors.hospitalName = 'Hospital / Clinic name is required.';
+    }
+
+    const cleanMobile = doctorMobile.replace(/\D/g, '');
+    if (!cleanMobile) {
+      errors.doctorMobile = 'Mobile Number is required.';
+    } else if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      errors.doctorMobile = 'Must be a valid 10-digit Indian mobile number (starts with 6-9).';
+    }
+
+    const cleanUser = doctorUsername.trim().toLowerCase();
+    if (!cleanUser) {
+      errors.doctorUsername = 'Username is required.';
+    } else if (cleanUser.length < 3) {
+      errors.doctorUsername = 'Username must be at least 3 characters.';
+    } else if (!/^[a-z0-9_.-]+$/.test(cleanUser)) {
+      errors.doctorUsername = 'Username can only contain lowercase letters, numbers, and _.-';
+    }
+
+    if (!doctorPassword) {
+      errors.doctorPassword = 'Password is required.';
+    } else if (doctorPassword.length < 8) {
+      errors.doctorPassword = 'Password must be at least 8 characters long.';
+    }
+
+    if (doctorPassword !== doctorConfirmPassword) {
+      errors.doctorConfirmPassword = 'Passwords do not match.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handlePatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
 
-    if (!validate()) {
-      return;
-    }
+    if (!validatePatient()) return;
 
     setIsSubmitting(true);
-
     const result = await register({
       patientName: patientName.trim(),
       mobileNumber: mobileNumber.replace(/\D/g, ''),
@@ -98,159 +187,266 @@ export const Register: React.FC = () => {
       bloodGroup,
       gender,
       stateName,
-      username: username.trim().toLowerCase(),
-      password,
+      username: patientUsername.trim().toLowerCase(),
+      password: patientPassword,
     });
-
     setIsSubmitting(false);
 
     if (result.success && result.profile) {
-      setCreatedProfile(result.profile);
+      setCreatedPatient(result.profile);
     } else {
-      setGeneralError(result.error || 'Registration failed. Please review your information.');
+      setGeneralError(result.error || 'Failed to create patient account. Please try again.');
     }
   };
 
-  // SUCCESS SCREEN
-  if (createdProfile) {
+  const handleDoctorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGeneralError('');
+
+    if (!validateDoctor()) return;
+
+    setIsSubmitting(true);
+    const result = await registerDoctor({
+      doctorName: doctorName.trim(),
+      registrationNumber: registrationNumber.trim().toUpperCase(),
+      specialization: specialization.trim(),
+      hospitalName: hospitalName.trim(),
+      mobileNumber: doctorMobile.replace(/\D/g, ''),
+      username: doctorUsername.trim().toLowerCase(),
+      password: doctorPassword,
+    });
+    setIsSubmitting(false);
+
+    if (result.success && result.profile) {
+      setCreatedDoctor(result.profile);
+    } else {
+      setGeneralError(result.error || 'Failed to create doctor account. Please try again.');
+    }
+  };
+
+  const copyHealthWalletId = () => {
+    if (createdPatient?.health_wallet_id) {
+      navigator.clipboard.writeText(createdPatient.health_wallet_id);
+      setCopiedHwId(true);
+      setTimeout(() => setCopiedHwId(false), 2000);
+    }
+  };
+
+  // SUCCESS SCREEN: Patient Created
+  if (createdPatient) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[#F8FAFC]">
-        <div className="w-full max-w-lg space-y-6 animate-in fade-in zoom-in-95 duration-200">
-          {/* Brand header */}
-          <div className="text-center space-y-1">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-600 text-white shadow-md mb-2">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              Patient Account Created Successfully
-            </h1>
+        <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-2">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Health Wallet Activated!
+            </h2>
             <p className="text-xs text-slate-500">
-              Your official National Health Wallet identity is active and ready
+              Welcome, <span className="font-semibold text-slate-800">{createdPatient.patient_name}</span>. Your authoritative digital health ID has been registered.
             </p>
           </div>
 
-          {/* Health Wallet ID Showcase Card */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6">
-            <div className="p-5 bg-gradient-to-r from-sky-900 to-slate-900 text-white rounded-2xl text-center space-y-2 relative overflow-hidden shadow-inner">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-sky-300">
-                Your Health Wallet ID
+          {/* Health Wallet ID badge */}
+          <div className="p-4 bg-gradient-to-br from-sky-50 to-indigo-50/60 border border-sky-200 rounded-xl space-y-2">
+            <p className="text-[11px] font-bold text-sky-800 uppercase tracking-wider">
+              Authoritative Health Wallet ID
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="font-mono text-xl md:text-2xl font-black text-sky-950 tracking-wider">
+                {createdPatient.health_wallet_id}
               </span>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-2xl sm:text-3xl font-mono font-extrabold tracking-widest text-sky-200">
-                  {createdProfile.health_wallet_id}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(createdProfile.health_wallet_id);
-                    setCopiedHwId(true);
-                    setTimeout(() => setCopiedHwId(false), 2000);
-                  }}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer text-sky-200"
-                  title="Copy Health Wallet ID"
-                  aria-label="Copy Health Wallet ID"
-                >
-                  {copiedHwId ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] text-sky-100/70">
-                Format: HW-[STATE CODE]-[8 RANDOM DIGITS]
-              </p>
-            </div>
-
-            {/* Registered Patient Details */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Registered Patient Details
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div>
-                  <span className="text-slate-400 block font-medium">Patient Name</span>
-                  <span className="font-bold text-slate-800">{createdProfile.patient_name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Username</span>
-                  <span className="font-mono font-bold text-sky-700">{createdProfile.username}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Mobile Number</span>
-                  <span className="font-mono font-semibold text-slate-800">+91 {createdProfile.mobile_number}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Blood Group</span>
-                  <span className="font-bold text-rose-600">{createdProfile.blood_group}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Gender</span>
-                  <span className="font-semibold text-slate-800">{createdProfile.gender}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">State (Code)</span>
-                  <span className="font-semibold text-slate-800">
-                    {createdProfile.state} ({createdProfile.state_code})
-                  </span>
-                </div>
-                <div className="col-span-2 pt-2 border-t border-slate-200/60">
-                  <span className="text-slate-400 block font-medium">Aadhaar Verification (Masked)</span>
-                  <span className="font-mono font-bold text-emerald-700">
-                    XXXX XXXX {createdProfile.aadhaar_last_four}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">
-                    (Full 12-digit number is cryptographically hashed and never stored in plaintext)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Proceed to Login Button */}
-            <div className="pt-2">
-              <PrimaryButton
-                size="lg"
-                className="w-full"
-                onClick={() => navigate('/login')}
-                icon={<ArrowRight className="w-4 h-4" />}
+              <button
+                type="button"
+                onClick={copyHealthWalletId}
+                className="p-1.5 text-sky-700 hover:text-sky-900 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
+                title="Copy Health Wallet ID"
               >
-                Proceed to Login
-              </PrimaryButton>
+                {copiedHwId ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[10px] text-sky-700">
+              Generated by Supabase Database Engine • State Node: {createdPatient.state_code}
+            </p>
+          </div>
+
+          <div className="text-left text-xs bg-slate-50 p-3.5 rounded-xl space-y-1.5 border border-slate-200/80">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Blood Group:</span>
+              <span className="font-bold text-slate-800">{createdPatient.blood_group}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Aadhaar Last 4:</span>
+              <span className="font-mono font-bold text-slate-800">XXXX XXXX {createdPatient.aadhaar_last_four}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Username:</span>
+              <span className="font-bold text-slate-800">{createdPatient.username}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">State:</span>
+              <span className="font-bold text-slate-800">{createdPatient.state}</span>
             </div>
           </div>
+
+          <PrimaryButton
+            onClick={() => navigate('/dashboard')}
+            className="w-full"
+            size="lg"
+            icon={<ArrowRight className="w-4 h-4" />}
+          >
+            Enter Patient Dashboard
+          </PrimaryButton>
         </div>
       </div>
     );
   }
 
-  // REGISTRATION FORM
+  // SUCCESS SCREEN: Doctor Created
+  if (createdDoctor) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[#F8FAFC]">
+        <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-2">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Doctor Account Registered!
+            </h2>
+            <p className="text-xs text-slate-500">
+              Welcome, <span className="font-semibold text-slate-800">{createdDoctor.doctor_name}</span>. Your clinical profile has been verified.
+            </p>
+          </div>
+
+          {/* Registration Details card */}
+          <div className="p-4 bg-gradient-to-br from-sky-50 to-indigo-50/60 border border-sky-200 rounded-xl space-y-2 text-left">
+            <div className="flex items-center gap-2 text-sky-800">
+              <Stethoscope className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Medical Practitioner Credentials
+              </span>
+            </div>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Reg Number:</span>
+                <span className="font-mono font-bold text-slate-900">{createdDoctor.registration_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Specialization:</span>
+                <span className="font-bold text-slate-900">{createdDoctor.specialization}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Hospital:</span>
+                <span className="font-bold text-slate-900">{createdDoctor.hospital_name}</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-sky-700 pt-1">
+              Note: Medical doctors do not receive a Health Wallet ID. Health Wallet IDs are reserved for patients.
+            </p>
+          </div>
+
+          <PrimaryButton
+            onClick={() => navigate('/doctor/dashboard')}
+            className="w-full"
+            size="lg"
+            icon={<ArrowRight className="w-4 h-4" />}
+          >
+            Enter Doctor Dashboard
+          </PrimaryButton>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[#F8FAFC]">
       <div className="w-full max-w-lg space-y-6">
+        {/* Brand header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-600 text-white shadow-md mb-1">
             <Shield className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Patient Registration
+            Health<span className="text-sky-600">Wallet</span>
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Register your verified Health Wallet account on the Unified National Health Network
+            National Digital Health Connectivity & Records Platform
           </p>
         </div>
 
-        {/* Configuration notice if Supabase is pending in .env */}
-        {!isConfigured && (
-          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="font-bold">Supabase Credentials Notice</p>
-              <p className="text-amber-800">
-                To connect to live Supabase PostgreSQL, add <code className="font-mono font-semibold">VITE_SUPABASE_URL</code> and{' '}
-                <code className="font-mono font-semibold">VITE_SUPABASE_ANON_KEY</code> to your <code className="font-mono">.env</code>.
-                Validation and flow will run smoothly in local verification mode.
+        {/* Role Tab Selector */}
+        <div className="flex bg-slate-200/80 p-1 rounded-xl shadow-2xs">
+          <button
+            type="button"
+            onClick={() => {
+              setRoleTab('PATIENT');
+              setFieldErrors({});
+              setGeneralError('');
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              roleTab === 'PATIENT'
+                ? 'bg-white text-sky-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Patient Registration</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setRoleTab('DOCTOR');
+              setFieldErrors({});
+              setGeneralError('');
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              roleTab === 'DOCTOR'
+                ? 'bg-white text-sky-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Stethoscope className="w-4 h-4" />
+            <span>Doctor Registration</span>
+          </button>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                {roleTab === 'DOCTOR' ? (
+                  <>
+                    <Stethoscope className="w-5 h-5 text-sky-600" />
+                    <span>Doctor Profile Registration</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 text-sky-600" />
+                    <span>New Patient Health Wallet</span>
+                  </>
+                )}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {roleTab === 'DOCTOR'
+                  ? 'Register clinical credentials to request patient record access'
+                  : 'Enroll and generate your authoritative Health Wallet ID'}
               </p>
             </div>
+            <Link
+              to="/login"
+              className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-semibold"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </Link>
           </div>
-        )}
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6">
           {generalError && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
@@ -258,240 +454,365 @@ export const Register: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {/* 1. Patient Name */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                1. Patient Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={patientName}
-                onChange={(e) => {
-                  setPatientName(e.target.value);
-                  if (fieldErrors.patientName) setFieldErrors((prev) => ({ ...prev, patientName: '' }));
-                }}
-                placeholder="Full legal name (e.g. Sunita Patil)"
-                className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors ${
-                  fieldErrors.patientName
-                    ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                    : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                }`}
-              />
-              {fieldErrors.patientName && (
-                <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.patientName}</p>
-              )}
-            </div>
-
-            {/* 2 & 3: Mobile Number and Aadhaar Number */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* DOCTOR REGISTRATION FORM */}
+          {roleTab === 'DOCTOR' ? (
+            <form onSubmit={handleDoctorSubmit} className="space-y-4">
+              {/* Doctor Name */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  2. Mobile Number <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={mobileNumber}
-                    onChange={(e) => {
-                      setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10));
-                      if (fieldErrors.mobileNumber) setFieldErrors((prev) => ({ ...prev, mobileNumber: '' }));
-                    }}
-                    placeholder="10-digit mobile"
-                    className={`w-full pl-11 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors font-mono ${
-                      fieldErrors.mobileNumber
-                        ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                        : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                    }`}
-                  />
-                </div>
-                {fieldErrors.mobileNumber && (
-                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.mobileNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  3. Aadhaar Number <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Doctor Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  maxLength={14}
-                  value={displayAadhaar}
-                  onChange={handleAadhaarChange}
-                  placeholder="12-digit Aadhaar"
-                  className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors font-mono ${
-                    fieldErrors.aadhaarNumber
-                      ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                      : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                  }`}
+                  value={doctorName}
+                  onChange={(e) => setDoctorName(e.target.value)}
+                  placeholder="e.g. Dr. Priya Sharma"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
                 />
-                {fieldErrors.aadhaarNumber && (
-                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.aadhaarNumber}</p>
-                )}
-              </div>
-            </div>
-
-            {/* 4 & 5: Blood Group & Gender */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  4. Blood Group <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={bloodGroup}
-                  onChange={(e) => setBloodGroup(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
-                >
-                  {BLOOD_GROUPS.map((bg) => (
-                    <option key={bg} value={bg}>
-                      {bg}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  5. Gender <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
-                >
-                  {GENDERS.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 6: State (Contains ALL 28 Indian States) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                6. State (India) <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={stateName}
-                onChange={(e) => setStateName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
-              >
-                {INDIAN_STATES.map((s) => (
-                  <option key={s.code} value={s.name}>
-                    {s.name} — {s.code}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 7: Username */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                7. Username <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value.toLowerCase());
-                  if (fieldErrors.username) setFieldErrors((prev) => ({ ...prev, username: '' }));
-                }}
-                placeholder="Unique patient handle (e.g. sunita_patil)"
-                className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors font-mono ${
-                  fieldErrors.username
-                    ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                    : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                }`}
-              />
-              {fieldErrors.username && (
-                <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.username}</p>
-              )}
-            </div>
-
-            {/* 8 & 9: Password & Confirm Password */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  8. Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
-                  }}
-                  placeholder="Min 8 characters"
-                  className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors ${
-                    fieldErrors.password
-                      ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                      : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                  }`}
-                />
-                {fieldErrors.password && (
-                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.password}</p>
+                {fieldErrors.doctorName && (
+                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.doctorName}</p>
                 )}
               </div>
 
+              {/* Registration Number & Specialization */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Medical Reg. Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={registrationNumber}
+                    onChange={(e) => setRegistrationNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. MCI-2018-9482"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm font-mono text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.registrationNumber && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.registrationNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Specialization <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  >
+                    {DOCTOR_SPECIALIZATIONS.map((spec) => (
+                      <option key={spec} value={spec}>
+                        {spec}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Hospital / Clinic */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  9. Confirm Password <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Hospital / Clinic Affiliation <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
-                  }}
-                  placeholder="Confirm password"
-                  className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-colors ${
-                    fieldErrors.confirmPassword
-                      ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
-                      : 'border-slate-200 focus:border-sky-500 focus:bg-white'
-                  }`}
-                />
-                {fieldErrors.confirmPassword && (
-                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.confirmPassword}</p>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    required
+                    value={hospitalName}
+                    onChange={(e) => setHospitalName(e.target.value)}
+                    placeholder="e.g. Apollo Multi-Speciality Hospital, Chennai"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                </div>
+                {fieldErrors.hospitalName && (
+                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.hospitalName}</p>
                 )}
               </div>
-            </div>
 
-            <div className="pt-2">
+              {/* Mobile Number & Username */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Mobile Number <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      value={doctorMobile}
+                      onChange={(e) => setDoctorMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="9845199887"
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors font-medium"
+                    />
+                  </div>
+                  {fieldErrors.doctorMobile && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.doctorMobile}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Doctor Username <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={doctorUsername}
+                    onChange={(e) => setDoctorUsername(e.target.value.toLowerCase())}
+                    placeholder="e.g. dr_priya"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.doctorUsername && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.doctorUsername}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Password & Confirm */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Password (min. 8 chars) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={doctorPassword}
+                    onChange={(e) => setDoctorPassword(e.target.value)}
+                    placeholder="Create strong password"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.doctorPassword && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.doctorPassword}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Confirm Password <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={doctorConfirmPassword}
+                    onChange={(e) => setDoctorConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.doctorConfirmPassword && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.doctorConfirmPassword}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 bg-sky-50 border border-sky-100 rounded-xl text-xs text-sky-800 flex items-start gap-2">
+                <FileCheck className="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  Doctor accounts are stored in the verified <code className="font-mono font-bold">doctor_profiles</code> registry. Doctors do not receive Health Wallet IDs.
+                </span>
+              </div>
+
               <PrimaryButton
                 type="submit"
-                size="lg"
                 className="w-full"
+                size="lg"
                 isLoading={isSubmitting}
-                icon={<Sparkles className="w-4 h-4" />}
+                icon={<ArrowRight className="w-4 h-4" />}
               >
-                Create Health Wallet Account
+                Register Doctor Account
               </PrimaryButton>
-            </div>
-          </form>
+            </form>
+          ) : (
+            /* PATIENT REGISTRATION FORM */
+            <form onSubmit={handlePatientSubmit} className="space-y-4">
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Patient Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="e.g. Sunita Patil"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                />
+                {fieldErrors.patientName && (
+                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.patientName}</p>
+                )}
+              </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 font-bold text-slate-500 hover:text-slate-800"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Already have an ID? Sign In</span>
-            </Link>
-            <span className="text-slate-400">9 Required Fields</span>
+              {/* Mobile Number & Aadhaar */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Mobile Number <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="9845122334"
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors font-medium"
+                    />
+                  </div>
+                  {fieldErrors.mobileNumber && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.mobileNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Aadhaar Number (12 Digits) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={displayAadhaar}
+                    onChange={handleAadhaarChange}
+                    placeholder="XXXX XXXX XXXX"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors font-mono"
+                  />
+                  {fieldErrors.aadhaarNumber && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.aadhaarNumber}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Blood Group, Gender & State */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Blood Group <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={bloodGroup}
+                    onChange={(e) => setBloodGroup(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors font-semibold"
+                  >
+                    {BLOOD_GROUPS.map((bg) => (
+                      <option key={bg} value={bg}>
+                        {bg}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Gender <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  >
+                    {GENDERS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    State / UT <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  >
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s.name} value={s.name}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Username */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Username <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={patientUsername}
+                  onChange={(e) => setPatientUsername(e.target.value)}
+                  placeholder="e.g. sunita_patil"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                />
+                {fieldErrors.username && (
+                  <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.username}</p>
+                )}
+              </div>
+
+              {/* Password & Confirm */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Password (min. 8 chars) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={patientPassword}
+                    onChange={(e) => setPatientPassword(e.target.value)}
+                    placeholder="Create strong password"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.password && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.password}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Confirm Password <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={patientConfirmPassword}
+                    onChange={(e) => setPatientConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                  />
+                  {fieldErrors.confirmPassword && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.confirmPassword}</p>
+                  )}
+                </div>
+              </div>
+
+              <PrimaryButton
+                type="submit"
+                className="w-full"
+                size="lg"
+                isLoading={isSubmitting}
+                icon={<ArrowRight className="w-4 h-4" />}
+              >
+                Activate Health Wallet ID
+              </PrimaryButton>
+            </form>
+          )}
+
+          <div className="pt-2 text-center text-xs text-slate-400">
+            <span>By proceeding, you agree to national health data security standards.</span>
           </div>
         </div>
       </div>

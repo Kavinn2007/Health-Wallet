@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Lock, User, ArrowRight, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import {
+  Shield,
+  Lock,
+  User,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Stethoscope,
+} from 'lucide-react';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, type UserRole } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isConfigured } = useAuth();
 
+  const [activeTab, setActiveTab] = useState<UserRole>('PATIENT');
   const [identifier, setIdentifier] = useState('sunita_patil');
   const [password, setPassword] = useState('PatientPass@123');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const fromPath = (location.state as any)?.from?.pathname || '/dashboard';
+  const switchTab = (tab: UserRole) => {
+    setActiveTab(tab);
+    setErrorMsg('');
+    if (tab === 'PATIENT') {
+      setIdentifier('sunita_patil');
+      setPassword('PatientPass@123');
+    } else {
+      setIdentifier('dr_ramesh');
+      setPassword('DoctorPass@123');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +51,24 @@ export const Login: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    const result = await login(identifier, password);
+    const result = await login(identifier, password, activeTab);
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate(fromPath, { replace: true });
+      const fromPath = (location.state as any)?.from?.pathname;
+      if (result.role === 'DOCTOR') {
+        if (fromPath && fromPath.startsWith('/doctor')) {
+          navigate(fromPath, { replace: true });
+        } else {
+          navigate('/doctor/dashboard', { replace: true });
+        }
+      } else {
+        if (fromPath && !fromPath.startsWith('/doctor')) {
+          navigate(fromPath, { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
     } else {
       setErrorMsg(result.error || 'Login failed. Please check your credentials.');
     }
@@ -66,20 +99,60 @@ export const Login: React.FC = () => {
               <p className="text-amber-800">
                 To connect to live Supabase PostgreSQL, populate <code className="font-mono font-semibold">VITE_SUPABASE_URL</code> and{' '}
                 <code className="font-mono font-semibold">VITE_SUPABASE_ANON_KEY</code> in your <code className="font-mono">.env</code>.
-                Pre-seeded test account <code className="font-mono font-semibold">sunita_patil</code> or newly registered accounts can be tested now.
+                Pre-seeded test accounts <code className="font-mono font-semibold">sunita_patil</code> (Patient) and <code className="font-mono font-semibold">dr_ramesh</code> (Doctor) are active.
               </p>
             </div>
           </div>
         )}
 
+        {/* Role Tab Selector */}
+        <div className="flex bg-slate-200/80 p-1 rounded-xl shadow-2xs">
+          <button
+            type="button"
+            onClick={() => switchTab('PATIENT')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'PATIENT'
+                ? 'bg-white text-sky-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Patient Portal</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('DOCTOR')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'DOCTOR'
+                ? 'bg-white text-sky-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Stethoscope className="w-4 h-4" />
+            <span>Doctor Portal</span>
+          </button>
+        </div>
+
         {/* Login Card */}
         <div className="bg-white border border-slate-200/90 rounded-2xl shadow-card p-6 md:p-8 space-y-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-              Patient Portal Sign In
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              {activeTab === 'DOCTOR' ? (
+                <>
+                  <Stethoscope className="w-5 h-5 text-sky-600" />
+                  <span>Doctor Portal Sign In</span>
+                </>
+              ) : (
+                <>
+                  <Shield className="w-5 h-5 text-sky-600" />
+                  <span>Patient Portal Sign In</span>
+                </>
+              )}
             </h2>
             <p className="text-xs text-slate-500">
-              Access your verified medical records and emergency wallet
+              {activeTab === 'DOCTOR'
+                ? 'Search patient Health Wallet IDs and manage clinical record access'
+                : 'Access your verified medical records and emergency wallet'}
             </p>
           </div>
 
@@ -96,7 +169,9 @@ export const Login: React.FC = () => {
                 htmlFor="login-identifier"
                 className="block text-xs font-bold text-slate-700 mb-1.5"
               >
-                Username or 10-Digit Mobile Number
+                {activeTab === 'DOCTOR'
+                  ? 'Doctor Username or 10-Digit Mobile Number'
+                  : 'Username or 10-Digit Mobile Number'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -113,7 +188,11 @@ export const Login: React.FC = () => {
                     if (errorMsg) setErrorMsg('');
                   }}
                   className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-colors font-medium"
-                  placeholder="e.g. sunita_patil or 9845122334"
+                  placeholder={
+                    activeTab === 'DOCTOR'
+                      ? 'e.g. dr_ramesh or 9845199887'
+                      : 'e.g. sunita_patil or 9845122334'
+                  }
                 />
               </div>
             </div>
@@ -154,28 +233,47 @@ export const Login: React.FC = () => {
               isLoading={isSubmitting}
               icon={<ArrowRight className="w-4 h-4" />}
             >
-              Sign In with Supabase Auth
+              {activeTab === 'DOCTOR'
+                ? 'Sign In as Doctor'
+                : 'Sign In to Patient Portal'}
             </PrimaryButton>
           </form>
 
           <div className="pt-4 border-t border-slate-100 text-center space-y-3">
-            <p className="text-xs text-slate-500">
-              New patient without a Health Wallet ID?
-            </p>
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Activate New Health Wallet ID &rarr;</span>
-            </Link>
+            {activeTab === 'DOCTOR' ? (
+              <>
+                <p className="text-xs text-slate-500">
+                  New clinical practitioner without a registered profile?
+                </p>
+                <Link
+                  to="/register?role=doctor"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors"
+                >
+                  <Stethoscope className="w-3.5 h-3.5" />
+                  <span>Register Doctor Profile &rarr;</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500">
+                  New patient without a Health Wallet ID?
+                </p>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Activate New Health Wallet ID &rarr;</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
         {/* Security badge */}
         <div className="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span>256-Bit Cryptographic Supabase Auth & RLS Guard</span>
+          <span>256-Bit Cryptographic Supabase Auth & Role-Restricted RLS</span>
         </div>
       </div>
     </div>

@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { DoctorLayout } from './components/layout/DoctorLayout';
 
-// Page Views
+// Patient Page Views
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
@@ -18,6 +19,12 @@ import { OfflineWallet } from './pages/OfflineWallet';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 
+// Doctor Page Views (Phase 5)
+import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
+import { DoctorPatientSearch } from './pages/doctor/DoctorPatientSearch';
+import { DoctorAccessRequests } from './pages/doctor/DoctorAccessRequests';
+import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
+
 export function App() {
   return (
     <BrowserRouter>
@@ -27,8 +34,8 @@ export function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Authenticated Application Shell (Protected) */}
-          <Route element={<ProtectedRoute />}>
+          {/* Patient Application Shell (Role: PATIENT only) */}
+          <Route element={<ProtectedRoute allowedRoles={['PATIENT']} />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -42,6 +49,17 @@ export function App() {
               <Route path="/offline-wallet" element={<OfflineWallet />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
+            </Route>
+          </Route>
+
+          {/* Doctor Application Shell (Role: DOCTOR only) */}
+          <Route path="/doctor" element={<ProtectedRoute allowedRoles={['DOCTOR']} />}>
+            <Route element={<DoctorLayout />}>
+              <Route index element={<Navigate to="/doctor/dashboard" replace />} />
+              <Route path="dashboard" element={<DoctorDashboard />} />
+              <Route path="patients" element={<DoctorPatientSearch />} />
+              <Route path="access-requests" element={<DoctorAccessRequests />} />
+              <Route path="profile" element={<DoctorProfilePage />} />
             </Route>
           </Route>
 
