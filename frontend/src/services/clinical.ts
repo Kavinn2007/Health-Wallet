@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, type MinimalPatientInfo } from './supabase';
 import { getDoctorProfile, DEMO_DOCTOR_PROFILE } from './doctors';
 import { getDoctorConsentStatus } from './consent';
 import { type MedicalRecord, type CreatorType } from './healthRecords';
@@ -569,5 +569,110 @@ export async function doctorCreatePrescription(
       success: false,
       error: err?.message || 'Failed to create prescription.',
     };
+  }
+}
+
+/**
+ * Fetches minimal patient profile for an authorized doctor.
+ * Gated by active approved consent.
+ */
+export async function getPatientSummaryForDoctor(
+  patientId: string
+): Promise<MinimalPatientInfo | null> {
+  if (!patientId) return null;
+
+  if (!isSupabaseConfigured) {
+    // 1. Check access requests in localStorage
+    try {
+      const localReqsStr = localStorage.getItem('health_wallet_v2_access_requests');
+      if (localReqsStr) {
+        const reqs = JSON.parse(localReqsStr);
+        const match = reqs.find((r: any) => r.patient_id === patientId && r.patient);
+        if (match?.patient) {
+          return match.patient;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Check local mock session
+    try {
+      const mockSession = localStorage.getItem('health_wallet_v2_mock_session');
+      if (mockSession) {
+        const parsed = JSON.parse(mockSession);
+        if (parsed?.profile && (parsed.profile.id === patientId || parsed.user?.id === patientId)) {
+          return {
+            id: parsed.profile.id || patientId,
+            patient_name: parsed.profile.patient_name || 'Patient',
+            health_wallet_id: parsed.profile.health_wallet_id || 'HW-TN-38236621',
+            blood_group: parsed.profile.blood_group || 'B+',
+            state: parsed.profile.state || 'Tamil Nadu',
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Fallback demo patient
+    return {
+      id: patientId,
+      patient_name: 'Sunita Patil',
+      health_wallet_id: 'HW-TN-38236621',
+      blood_group: 'B+',
+      state: 'Tamil Nadu',
+    };
+  }
+
+  try {
+    // Try RPC first
+    const { data, error } = await supabase.rpc('doctor_get_patient_profile', {
+      p_patient_id: patientId,
+    });
+
+    if (!error && data && data.length > 0) {
+      const row = data[0];
+      return {
+        id: row.id,
+        patient_name: row.patient_name,
+        health_wallet_id: row.health_wallet_id,
+        blood_group: row.blood_group,
+        state: row.state,
+      };
+    }
+
+    // Fallback query to patient_profiles directly
+    const { data: profile } = await supabase
+      .from('patient_profiles')
+      .select('id, patient_name, health_wallet_id, blood_group, state')
+      .eq('id', patientId)
+      .maybeSingle();
+
+    if (profile) {
+      return profile as MinimalPatientInfo;
+    }
+
+    // Fallback: check access_requests
+    const { data: userAuth } = await supabase.auth.getUser();
+    if (userAuth?.user) {
+      const { data: req } = await supabase
+        .from('access_requests')
+        .select('patient:patient_profiles(id, patient_name, health_wallet_id, blood_group, state)')
+        .eq('patient_id', patientId)
+        .eq('requester_user_id', userAuth.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (req && (req as any).patient) {
+        return (req as any).patient as MinimalPatientInfo;
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('Error fetching patient profile for doctor:', err);
+    return null;
   }
 }

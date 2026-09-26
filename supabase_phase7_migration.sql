@@ -573,3 +573,74 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.doctor_create_prescription(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, DATE, DATE) TO authenticated;
+
+-- --------------------------------------------------------------------
+-- 3. SECURE FUNCTION: Doctor Gets Patient Profile (Consent Gated)
+-- Returns minimal patient info only if caller is doctor with active consent.
+-- --------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.doctor_get_patient_profile(p_patient_id UUID)
+RETURNS TABLE (
+  id UUID,
+  patient_name VARCHAR(100),
+  health_wallet_id VARCHAR(30),
+  blood_group VARCHAR(10),
+  state VARCHAR(50)
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_is_doctor BOOLEAN;
+  v_has_consent BOOLEAN;
+BEGIN
+  -- 1. Verify caller is doctor
+  SELECT EXISTS (
+    SELECT 1 FROM public.doctor_profiles WHERE user_id = auth.uid()
+  ) INTO v_is_doctor;
+
+  IF NOT v_is_doctor THEN
+    RAISE EXCEPTION 'Access Denied: Caller is not a verified medical doctor.';
+  END IF;
+
+  -- 2. Verify active approved consent exists
+  SELECT EXISTS (
+    SELECT 1 FROM public.consents
+    WHERE patient_id = p_patient_id
+      AND doctor_user_id = auth.uid()
+      AND status = 'APPROVED'
+      AND expires_at > NOW()
+  ) INTO v_has_consent;
+
+  IF NOT v_has_consent THEN
+    RAISE EXCEPTION 'Access Denied: No active approved patient consent found.';
+  END IF;
+
+  RETURN QUERY
+  SELECT 
+    p.id,
+    p.patient_name,
+    p.health_wallet_id,
+    p.blood_group,
+    p.state
+  FROM public.patient_profiles p
+  WHERE p.id = p_patient_id
+  LIMIT 1;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.doctor_get_patient_profile(UUID) TO authenticated;
+
+-- Add Doctor SELECT Policy for patient_profiles under active approved consent
+DROP POLICY IF EXISTS "Doctors can view patient profile with active approved consent" ON public.patient_profiles;
+CREATE POLICY "Doctors can view patient profile with active approved consent"
+ON public.patient_profiles FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.consents c
+    WHERE c.patient_id = public.patient_profiles.id
+      AND c.doctor_user_id = auth.uid()
+      AND c.status = 'APPROVED'
+      AND c.expires_at > NOW()
+  )
+);

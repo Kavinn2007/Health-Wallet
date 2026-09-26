@@ -24,6 +24,7 @@ import {
   doctorCreateDiagnosis,
   doctorCreateTreatment,
   doctorCreatePrescription,
+  getPatientSummaryForDoctor,
   type CreateConsultationInput,
   type CreateDiagnosisInput,
   type CreateTreatmentInput,
@@ -71,6 +72,7 @@ export const DoctorClinicalWorkspace: React.FC = () => {
   const [viewingRecord, setViewingRecord] = useState<MedicalRecord | null>(null);
   const [recordDetail, setRecordDetail] = useState<MedicalRecordDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState('');
 
   // Form States
   // Consultation
@@ -133,6 +135,10 @@ export const DoctorClinicalWorkspace: React.FC = () => {
     // Fetch authorized records and consent status
     const res = await getDoctorAuthorizedRecords(patientId);
 
+    // Fetch patient identity details
+    const info = await getPatientSummaryForDoctor(patientId);
+    setPatientInfo(info);
+
     setIsLoading(false);
     if (res.success) {
       setRecords(res.records);
@@ -155,25 +161,38 @@ export const DoctorClinicalWorkspace: React.FC = () => {
   // Handle Record Detail View with LIVE Recheck
   const handleOpenRecordDetail = async (record: MedicalRecord) => {
     if (!patientId) return;
+    setViewingRecord(record);
+    setRecordDetail(null);
+    setDetailError('');
     setIsLoadingDetail(true);
 
     // Re-verify authorization strictly before opening detail
     const recheck = await getDoctorConsentStatus(patientId);
-    if (!recheck.hasConsent) {
+    if (!recheck.hasConsent || recheck.status !== 'APPROVED' || recheck.isExpired) {
       setIsLoadingDetail(false);
-      setViewingRecord(null);
-      setErrorMessage(
-        recheck.status === 'EXPIRED'
-          ? 'Consent expired: Patient access window has expired.'
-          : recheck.status === 'REVOKED'
-          ? 'Access revoked: Patient has revoked authorization.'
-          : 'Access no longer available.'
-      );
+      setDetailError('Access no longer available.');
       addToast('error', 'Access Denied', 'Access no longer available.');
       return;
     }
 
-    setViewingRecord(record);
+    // Check category authorization
+    const typeStr = record.record_type;
+    const isCategoryPermitted =
+      recheck.approvedRecordTypes.includes('ALL_RECORDS') ||
+      (typeStr === 'CONSULTATION' && recheck.approvedRecordTypes.includes('CONSULTATIONS')) ||
+      (typeStr === 'DIAGNOSIS' && recheck.approvedRecordTypes.includes('DIAGNOSES')) ||
+      (typeStr === 'TREATMENT' && recheck.approvedRecordTypes.includes('TREATMENTS')) ||
+      (typeStr === 'PRESCRIPTION' && recheck.approvedRecordTypes.includes('PRESCRIPTIONS')) ||
+      (typeStr === 'LAB_REPORT' && recheck.approvedRecordTypes.includes('LAB_REPORTS')) ||
+      (typeStr === 'IMAGING' && recheck.approvedRecordTypes.includes('IMAGING'));
+
+    if (!isCategoryPermitted) {
+      setIsLoadingDetail(false);
+      setDetailError('Access no longer available.');
+      addToast('error', 'Access Denied', 'Access no longer available.');
+      return;
+    }
+
     const detailRes = await getMedicalRecordDetail(record.id, record.record_type, record.document_path);
     setIsLoadingDetail(false);
     if (detailRes.data) {
@@ -438,19 +457,19 @@ export const DoctorClinicalWorkspace: React.FC = () => {
         <div className="space-y-6">
           {/* Header Card: Patient Identity & Active Consent */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-4 border-b border-slate-100 gap-4">
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold text-slate-900">
-                    Doctor Clinical Workspace
+                    {patientInfo?.patient_name || 'Patient Clinical Workspace'}
                   </h1>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    Consent Active
+                    Consent APPROVED
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Authorized to create and view patient clinical records under active consent.
+                  Authorized Doctor Clinical Workspace under active patient consent.
                 </p>
               </div>
 
@@ -473,20 +492,67 @@ export const DoctorClinicalWorkspace: React.FC = () => {
               )}
             </div>
 
-            {/* Authorized Categories Badges */}
-            <div className="space-y-1.5">
-              <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                Authorized Record Categories:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {allowedCategories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-100"
-                  >
-                    ✓ {cat}
-                  </span>
-                ))}
+            {/* Patient Identity Metadata */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                  Patient Name:
+                </span>
+                <span className="font-bold text-slate-800 text-sm">
+                  {patientInfo?.patient_name || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                  Health Wallet ID:
+                </span>
+                <span className="font-mono font-bold text-sky-700 text-xs">
+                  {patientInfo?.health_wallet_id || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                  Blood Group:
+                </span>
+                <span className="font-bold text-rose-600">
+                  {patientInfo?.blood_group || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                  State:
+                </span>
+                <span className="font-medium text-slate-700">
+                  {patientInfo?.state || '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Consent Status & Authorized Categories Badges */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                  Consent Status:
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800">
+                  APPROVED
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                  Authorized Categories:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {allowedCategories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-100"
+                    >
+                      ✓ {cat}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1202,7 +1268,20 @@ export const DoctorClinicalWorkspace: React.FC = () => {
               </button>
             </div>
 
-            {isLoadingDetail ? (
+            {detailError ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-slate-900">Access Restricted</h4>
+                  <p className="text-xs font-semibold text-rose-600">{detailError}</p>
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  Patient consent has expired, was revoked, or does not authorize viewing this record category.
+                </p>
+              </div>
+            ) : isLoadingDetail ? (
               <div className="py-8">
                 <LoadingState message="Re-checking clinical consent &amp; loading record details..." />
               </div>

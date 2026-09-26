@@ -753,6 +753,72 @@ export const HealthRecords: React.FC = () => {
               </div>
             )}
 
+            {/* Diagnosis Specific Details */}
+            {recordDetail?.diagnosis && (
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Diagnosis Details
+                </h4>
+                <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-2">
+                  <div>
+                    <span className="text-slate-500 font-semibold block text-[11px]">Condition / Diagnosis</span>
+                    <span className="font-bold text-indigo-950 text-sm">
+                      {recordDetail.diagnosis.diagnosis_name}
+                    </span>
+                  </div>
+                  {recordDetail.diagnosis.provider && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px]">Diagnosing Provider</span>
+                      <span className="font-medium text-slate-800">
+                        {recordDetail.diagnosis.provider}
+                      </span>
+                    </div>
+                  )}
+                  {recordDetail.diagnosis.notes && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px]">Doctor Clinical Notes</span>
+                      <p className="p-2.5 bg-white rounded-xl border border-indigo-100 text-slate-700">
+                        {recordDetail.diagnosis.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Treatment Specific Details */}
+            {recordDetail?.treatment && (
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Treatment &amp; Intervention Details
+                </h4>
+                <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100 space-y-2">
+                  <div>
+                    <span className="text-slate-500 font-semibold block text-[11px]">Treatment / Intervention</span>
+                    <span className="font-bold text-teal-950 text-sm">
+                      {recordDetail.treatment.treatment_name}
+                    </span>
+                  </div>
+                  {recordDetail.treatment.care_plan && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px]">Care Plan</span>
+                      <p className="p-2.5 bg-white rounded-xl border border-teal-100 text-slate-700">
+                        {recordDetail.treatment.care_plan}
+                      </p>
+                    </div>
+                  )}
+                  {recordDetail.treatment.notes && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px]">Clinical Notes</span>
+                      <p className="p-2.5 bg-white rounded-xl border border-teal-100 text-slate-700">
+                        {recordDetail.treatment.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Document Attachment & Short-Lived Signed Download */}
             {selectedRecord.document_path && (
               <div className="pt-2 border-t border-slate-100">
