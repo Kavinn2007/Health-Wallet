@@ -2,6 +2,8 @@ import { supabase, isSupabaseConfigured, type MinimalPatientInfo } from './supab
 import { getDoctorProfile, DEMO_DOCTOR_PROFILE } from './doctors';
 import { getDoctorConsentStatus } from './consent';
 import { type MedicalRecord, type CreatorType } from './healthRecords';
+import { recordMockAuditLog } from './audit';
+import { recordMockNotification } from './notifications';
 
 export interface CreateConsultationInput {
   patientId: string;
@@ -149,6 +151,28 @@ export async function doctorCreateConsultation(
       console.warn('Local storage error:', e);
     }
 
+    // Mock audit and notification
+    recordMockAuditLog({
+      user_id: doctor.user_id,
+      role: 'DOCTOR',
+      patient_id: patientId,
+      action: 'CREATE_CONSULTATION',
+      record_type: 'CONSULTATION',
+      record_id: recordId,
+      status: 'SUCCESS',
+      metadata: { doctor_name: doctor.doctor_name, chief_complaint: chiefComplaint },
+    });
+
+    recordMockNotification({
+      user_id: patientId,
+      type: 'CONSULTATION_CREATED',
+      title: 'New Consultation Added',
+      message: 'A doctor added a consultation to your health record.',
+      patient_id: patientId,
+      related_record_id: recordId,
+      is_read: false,
+    });
+
     return { success: true, recordId, childId };
   }
 
@@ -274,6 +298,28 @@ export async function doctorCreateDiagnosis(
       console.warn('Local storage error:', e);
     }
 
+    // Mock audit and notification
+    recordMockAuditLog({
+      user_id: doctor.user_id,
+      role: 'DOCTOR',
+      patient_id: patientId,
+      action: 'CREATE_DIAGNOSIS',
+      record_type: 'DIAGNOSIS',
+      record_id: recordId,
+      status: 'SUCCESS',
+      metadata: { doctor_name: doctor.doctor_name, condition },
+    });
+
+    recordMockNotification({
+      user_id: patientId,
+      type: 'DIAGNOSIS_CREATED',
+      title: 'New Diagnosis Added',
+      message: 'A doctor added a diagnosis to your health record.',
+      patient_id: patientId,
+      related_record_id: recordId,
+      is_read: false,
+    });
+
     return { success: true, recordId, childId };
   }
 
@@ -395,6 +441,28 @@ export async function doctorCreateTreatment(
     } catch (e) {
       console.warn('Local storage error:', e);
     }
+
+    // Mock audit and notification
+    recordMockAuditLog({
+      user_id: doctor.user_id,
+      role: 'DOCTOR',
+      patient_id: patientId,
+      action: 'CREATE_TREATMENT',
+      record_type: 'TREATMENT',
+      record_id: recordId,
+      status: 'SUCCESS',
+      metadata: { doctor_name: doctor.doctor_name, treatment },
+    });
+
+    recordMockNotification({
+      user_id: patientId,
+      type: 'TREATMENT_CREATED',
+      title: 'New Treatment Added',
+      message: 'A doctor added a treatment plan to your health record.',
+      patient_id: patientId,
+      related_record_id: recordId,
+      is_read: false,
+    });
 
     return { success: true, recordId, childId };
   }
@@ -539,6 +607,28 @@ export async function doctorCreatePrescription(
     } catch (e) {
       console.warn('Local storage error:', e);
     }
+
+    // Mock audit and notification
+    recordMockAuditLog({
+      user_id: doctor.user_id,
+      role: 'DOCTOR',
+      patient_id: patientId,
+      action: 'CREATE_PRESCRIPTION',
+      record_type: 'PRESCRIPTION',
+      record_id: recordId,
+      status: 'SUCCESS',
+      metadata: { doctor_name: doctor.doctor_name, medicine_name: medicineName, dosage },
+    });
+
+    recordMockNotification({
+      user_id: patientId,
+      type: 'PRESCRIPTION_CREATED',
+      title: 'New Prescription Added',
+      message: 'A doctor added a prescription to your health record.',
+      patient_id: patientId,
+      related_record_id: recordId,
+      is_read: false,
+    });
 
     return { success: true, recordId, childId };
   }

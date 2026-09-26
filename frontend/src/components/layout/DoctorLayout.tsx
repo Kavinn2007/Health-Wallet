@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Menu, Stethoscope, LogOut } from 'lucide-react';
 import { DoctorSidebar } from './DoctorSidebar';
+import { NotificationButton } from './NotificationButton';
 import { useAuth } from '../../context/AuthContext';
 
 export const DoctorLayout: React.FC = () => {
@@ -74,6 +75,8 @@ export const DoctorLayout: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
               <span>National Health Stack Node Active</span>
             </div>
+
+            <NotificationButton isDoctor />
 
             <button
               type="button"

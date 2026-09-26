@@ -6,6 +6,8 @@ import {
   type AccessRequest,
   type RecordCategory,
 } from './supabase';
+import { recordMockAuditLog } from './audit';
+import { recordMockNotification } from './notifications';
 
 export interface CreateAccessRequestInput {
   patientId: string;
@@ -253,6 +255,31 @@ export async function createAccessRequest(
 
     requests.unshift(newRequest);
     localStorage.setItem(LOCAL_STORAGE_ACCESS_REQUESTS_KEY, JSON.stringify(requests));
+
+    // Mock audit & notification
+    recordMockAuditLog({
+      user_id: 'doc-auth-user-demo-1',
+      role: 'DOCTOR',
+      patient_id: input.patientId,
+      action: 'REQUEST_ACCESS',
+      status: 'PENDING',
+      reason: cleanReason,
+      metadata: {
+        doctor_name: 'Dr. Practitioner',
+        requested_record_types: input.requestedRecordTypes,
+      },
+    });
+
+    recordMockNotification({
+      user_id: input.patientId,
+      type: 'ACCESS_REQUEST',
+      title: 'New Access Request',
+      message: 'Dr. Practitioner has requested access to your medical records.',
+      patient_id: input.patientId,
+      related_request_id: newRequest.id,
+      is_read: false,
+    });
+
     return { success: true, request: newRequest };
   }
 

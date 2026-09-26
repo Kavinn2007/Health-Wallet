@@ -10,6 +10,8 @@ import {
   Stethoscope,
   Building2,
   ShieldCheck,
+  Activity,
+  Bell,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +47,16 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({ onClose, isMobile 
       to: '/doctor/access-requests',
       label: 'Access Requests',
       icon: <KeyRound className="w-4 h-4" />,
+    },
+    {
+      to: '/doctor/activity',
+      label: 'Clinical Activity',
+      icon: <Activity className="w-4 h-4" />,
+    },
+    {
+      to: '/doctor/notifications',
+      label: 'Notifications',
+      icon: <Bell className="w-4 h-4" />,
     },
     {
       to: '/doctor/profile',

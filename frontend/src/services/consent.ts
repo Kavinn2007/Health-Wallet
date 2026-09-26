@@ -9,6 +9,8 @@ import {
 } from './supabase';
 import { DEMO_DOCTOR_PROFILE } from './doctors';
 import { type MedicalRecord } from './healthRecords';
+import { recordMockAuditLog } from './audit';
+import { recordMockNotification } from './notifications';
 
 const LOCAL_STORAGE_ACCESS_REQUESTS_KEY = 'health_wallet_v2_access_requests';
 const LOCAL_STORAGE_CONSENTS_KEY = 'health_wallet_v2_consents';
@@ -129,6 +131,29 @@ export async function approveAccessRequest(
       }
       localStorage.setItem(LOCAL_STORAGE_CONSENTS_KEY, JSON.stringify(consents));
 
+      // Mock audit & notification
+      recordMockAuditLog({
+        user_id: req.patient_id,
+        role: 'PATIENT',
+        patient_id: req.patient_id,
+        action: 'GRANT_CONSENT',
+        status: 'APPROVED',
+        metadata: {
+          doctor_name: DEMO_DOCTOR_PROFILE.doctor_name,
+          access_request_id: req.id,
+        },
+      });
+
+      recordMockNotification({
+        user_id: req.requester_user_id,
+        type: 'ACCESS_GRANTED',
+        title: 'Access Granted',
+        message: "Your request to access the patient's approved medical records has been granted.",
+        patient_id: req.patient_id,
+        related_request_id: req.id,
+        is_read: false,
+      });
+
       return { success: true, consent: newConsent };
     } catch (e: any) {
       return { success: false, error: e?.message || 'Failed to approve request' };
@@ -198,6 +223,29 @@ export async function denyAccessRequest(
       consents.unshift(deniedConsent);
       localStorage.setItem(LOCAL_STORAGE_CONSENTS_KEY, JSON.stringify(consents));
 
+      // Mock audit & notification
+      recordMockAuditLog({
+        user_id: req.patient_id,
+        role: 'PATIENT',
+        patient_id: req.patient_id,
+        action: 'DENY_CONSENT',
+        status: 'DENIED',
+        metadata: {
+          doctor_name: DEMO_DOCTOR_PROFILE.doctor_name,
+          access_request_id: req.id,
+        },
+      });
+
+      recordMockNotification({
+        user_id: req.requester_user_id,
+        type: 'ACCESS_DENIED',
+        title: 'Access Request Denied',
+        message: 'Your request for access was denied by the patient.',
+        patient_id: req.patient_id,
+        related_request_id: req.id,
+        is_read: false,
+      });
+
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e?.message || 'Failed to deny request' };
@@ -258,6 +306,29 @@ export async function revokeConsent(
           localStorage.setItem(LOCAL_STORAGE_ACCESS_REQUESTS_KEY, JSON.stringify(requests));
         }
       }
+
+      // Mock audit & notification
+      recordMockAuditLog({
+        user_id: consent.patient_id,
+        role: 'PATIENT',
+        patient_id: consent.patient_id,
+        action: 'REVOKE_CONSENT',
+        status: 'REVOKED',
+        metadata: {
+          doctor_name: DEMO_DOCTOR_PROFILE.doctor_name,
+          consent_id: consent.id,
+        },
+      });
+
+      recordMockNotification({
+        user_id: consent.doctor_user_id,
+        type: 'ACCESS_REVOKED',
+        title: 'Access Revoked',
+        message: 'Your previously granted access has been revoked.',
+        patient_id: consent.patient_id,
+        related_request_id: consent.access_request_id,
+        is_read: false,
+      });
 
       return { success: true };
     } catch (e: any) {

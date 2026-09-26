@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { getDoctorAuthorizedRecords } from '../../services/consent';
+import { logMedicalRecordView } from '../../services/notifications';
 import { searchPatientByHealthWalletId } from '../../services/doctors';
 import { type MedicalRecord } from '../../services/healthRecords';
 import { type RecordCategory, type ConsentStatus, type MinimalPatientInfo } from '../../services/supabase';
@@ -92,6 +93,8 @@ export const DoctorPatientRecords: React.FC = () => {
       setErrorMessage(recheck.error || 'Consent has expired or been revoked.');
       return;
     }
+    // Phase 8: Log authorized medical record view
+    await logMedicalRecordView(record.id, record.title);
     setViewingRecord(record);
   };
 

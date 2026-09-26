@@ -19,6 +19,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { getDoctorAuthorizedRecords, getDoctorConsentStatus } from '../../services/consent';
+import { logMedicalRecordView } from '../../services/notifications';
 import {
   doctorCreateConsultation,
   doctorCreateDiagnosis,
@@ -200,6 +201,9 @@ export const DoctorClinicalWorkspace: React.FC = () => {
     } else {
       setRecordDetail({ record });
     }
+
+    // Phase 8: Log authorized medical record view
+    await logMedicalRecordView(record.id, record.title);
   };
 
   // Reset form states

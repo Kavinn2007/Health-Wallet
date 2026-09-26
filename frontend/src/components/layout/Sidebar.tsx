@@ -15,6 +15,8 @@ import {
   LogOut,
   X,
   KeyRound,
+  History,
+  Bell,
 } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -49,6 +51,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose, isMobile = false }) =
       to: '/access-requests',
       label: 'Access Requests',
       icon: <KeyRound className="w-4 h-4" />,
+    },
+    {
+      to: '/access-history',
+      label: 'Access History',
+      icon: <History className="w-4 h-4" />,
+    },
+    {
+      to: '/notifications',
+      label: 'Notifications',
+      icon: <Bell className="w-4 h-4" />,
     },
     {
       to: '/medicines',
