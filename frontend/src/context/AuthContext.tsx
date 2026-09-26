@@ -9,16 +9,20 @@ import {
   type PatientRegistrationInput,
   type DoctorProfile,
   type DoctorRegistrationInput,
+  type LabProfile,
+  type LabRegistrationInput,
 } from '../services/supabase';
 import { DEMO_DOCTOR_PROFILE } from '../services/doctors';
+import { DEMO_LAB_PROFILE, LOCAL_STORAGE_LAB_SESSION_KEY } from '../services/lab';
 
-export type UserRole = 'PATIENT' | 'DOCTOR';
+export type UserRole = 'PATIENT' | 'DOCTOR' | 'LAB';
 
 interface AuthContextType {
   user: User | null;
   profile: PatientProfile | null;
   patientProfile: PatientProfile | null;
   doctorProfile: DoctorProfile | null;
+  labProfile: LabProfile | null;
   role: UserRole | null;
   session: Session | null;
   isLoading: boolean;
@@ -34,6 +38,9 @@ interface AuthContextType {
   registerDoctor: (
     data: DoctorRegistrationInput
   ) => Promise<{ success: boolean; profile?: DoctorProfile; error?: string }>;
+  registerLab: (
+    data: LabRegistrationInput
+  ) => Promise<{ success: boolean; profile?: LabProfile; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -47,9 +54,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null);
+  const [labProfile, setLabProfile] = useState<LabProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch lab profile from Supabase
+  const fetchLabProfile = async (userId: string): Promise<LabProfile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('lab_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Could not fetch lab profile:', error.message);
+        return null;
+      }
+      return data as LabProfile;
+    } catch (err) {
+      console.warn('Network error fetching lab profile:', err);
+      return null;
+    }
+  };
 
   // Fetch doctor profile from Supabase
   const fetchDoctorProfile = async (userId: string): Promise<DoctorProfile | null> => {
@@ -95,29 +123,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resolveUserRoleAndProfile = async (
     userId: string,
     roleHint?: UserRole
-  ): Promise<{ role: UserRole | null; patient: PatientProfile | null; doctor: DoctorProfile | null }> => {
+  ): Promise<{
+    role: UserRole | null;
+    patient: PatientProfile | null;
+    doctor: DoctorProfile | null;
+    lab: LabProfile | null;
+  }> => {
+    if (roleHint === 'LAB') {
+      const lab = await fetchLabProfile(userId);
+      if (lab) return { role: 'LAB', patient: null, doctor: null, lab };
+    }
+
     if (roleHint === 'DOCTOR') {
       const doc = await fetchDoctorProfile(userId);
-      if (doc) return { role: 'DOCTOR', patient: null, doctor: doc };
+      if (doc) return { role: 'DOCTOR', patient: null, doctor: doc, lab: null };
     }
 
     if (roleHint === 'PATIENT') {
       const pat = await fetchPatientProfile(userId);
-      if (pat) return { role: 'PATIENT', patient: pat, doctor: null };
+      if (pat) return { role: 'PATIENT', patient: pat, doctor: null, lab: null };
     }
 
-    // Check doctor first, then patient
+    // Check doctor first, then lab, then patient
     const doc = await fetchDoctorProfile(userId);
     if (doc) {
-      return { role: 'DOCTOR', patient: null, doctor: doc };
+      return { role: 'DOCTOR', patient: null, doctor: doc, lab: null };
+    }
+
+    const lab = await fetchLabProfile(userId);
+    if (lab) {
+      return { role: 'LAB', patient: null, doctor: null, lab };
     }
 
     const pat = await fetchPatientProfile(userId);
     if (pat) {
-      return { role: 'PATIENT', patient: pat, doctor: null };
+      return { role: 'PATIENT', patient: pat, doctor: null, lab: null };
     }
 
-    return { role: null, patient: null, doctor: null };
+    return { role: null, patient: null, doctor: null, lab: null };
   };
 
   // Initial session restoration on mount
@@ -134,13 +177,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(initialSession);
             setUser(initialSession?.user ?? null);
             if (initialSession?.user) {
-              const { role: detectedRole, patient, doctor } = await resolveUserRoleAndProfile(
+              const { role: detectedRole, patient, doctor, lab } = await resolveUserRoleAndProfile(
                 initialSession.user.id
               );
               if (isMounted) {
                 setRole(detectedRole);
                 setProfile(patient);
                 setDoctorProfile(doctor);
+                setLabProfile(lab);
               }
             }
           }
@@ -151,7 +195,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fallback demo session from localStorage for testing when Supabase env is pending
         try {
           const activeRole = localStorage.getItem(LOCAL_STORAGE_ROLE_KEY) as UserRole | null;
-          if (activeRole === 'DOCTOR') {
+          if (activeRole === 'LAB') {
+            const labStored = localStorage.getItem(LOCAL_STORAGE_LAB_SESSION_KEY);
+            if (labStored && isMounted) {
+              const parsed = JSON.parse(labStored);
+              setLabProfile(parsed.profile);
+              setUser(parsed.user);
+              setRole('LAB');
+              setProfile(null);
+              setDoctorProfile(null);
+            }
+          } else if (activeRole === 'DOCTOR') {
             const docStored = localStorage.getItem(LOCAL_STORAGE_DOCTOR_SESSION_KEY);
             if (docStored && isMounted) {
               const parsed = JSON.parse(docStored);
@@ -159,6 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(parsed.user);
               setRole('DOCTOR');
               setProfile(null);
+              setLabProfile(null);
             }
           } else {
             const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
@@ -168,6 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(parsed.user);
               setRole('PATIENT');
               setDoctorProfile(null);
+              setLabProfile(null);
             }
           }
         } catch (e) {
@@ -192,19 +248,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          const { role: detectedRole, patient, doctor } = await resolveUserRoleAndProfile(
+          const { role: detectedRole, patient, doctor, lab } = await resolveUserRoleAndProfile(
             newSession.user.id
           );
           if (isMounted) {
             setRole(detectedRole);
             setProfile(patient);
             setDoctorProfile(doctor);
+            setLabProfile(lab);
           }
         } else {
           if (isMounted) {
             setRole(null);
             setProfile(null);
             setDoctorProfile(null);
+            setLabProfile(null);
           }
         }
       });
@@ -232,6 +290,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!isSupabaseConfigured) {
       // Demo / offline fallback simulation
+      if (rolePreference === 'LAB') {
+        const storedLab = localStorage.getItem(LOCAL_STORAGE_LAB_SESSION_KEY);
+        if (storedLab) {
+          try {
+            const parsed = JSON.parse(storedLab);
+            if (
+              (parsed.profile.username.toLowerCase() === cleanId.toLowerCase() ||
+                parsed.profile.mobile_number === cleanId) &&
+              password.length >= 6
+            ) {
+              setLabProfile(parsed.profile);
+              setUser(parsed.user);
+              setProfile(null);
+              setDoctorProfile(null);
+              setRole('LAB');
+              localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'LAB');
+              return { success: true, role: 'LAB' };
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // Allow pre-seeded demo lab: city_lab / 9876543210
+        if (cleanId.toLowerCase() === 'city_lab' || cleanId === '9876543210') {
+          const demoLab = DEMO_LAB_PROFILE;
+          const mockUser = {
+            id: demoLab.user_id,
+            email: 'city_lab@lab.healthwallet.local',
+          } as User;
+          setLabProfile(demoLab);
+          setDoctorProfile(null);
+          setProfile(null);
+          setUser(mockUser);
+          setRole('LAB');
+          localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'LAB');
+          localStorage.setItem(
+            LOCAL_STORAGE_LAB_SESSION_KEY,
+            JSON.stringify({ user: mockUser, profile: demoLab })
+          );
+          return { success: true, role: 'LAB' };
+        }
+
+        return {
+          success: false,
+          error:
+            'Lab account not found in demo mode. Use username "city_lab" (password: any) or register a new lab account.',
+        };
+      }
+
       if (rolePreference === 'DOCTOR') {
         const storedDoc = localStorage.getItem(LOCAL_STORAGE_DOCTOR_SESSION_KEY);
         if (storedDoc) {
@@ -345,6 +453,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const isMobile = /^[6-9]\d{9}$/.test(cleanId);
+
+      if (rolePreference === 'LAB') {
+        let authEmail = '';
+        if (isMobile) {
+          const { data: labMatch } = await supabase
+            .from('lab_profiles')
+            .select('username')
+            .eq('mobile_number', cleanId)
+            .maybeSingle();
+
+          if (!labMatch?.username) {
+            return {
+              success: false,
+              error: 'No lab staff account found with this mobile number. Please register first.',
+            };
+          }
+          authEmail = `${labMatch.username.toLowerCase()}@lab.healthwallet.local`;
+        } else {
+          authEmail = `${cleanId.toLowerCase()}@lab.healthwallet.local`;
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password,
+        });
+
+        if (authError || !authData.user) {
+          return {
+            success: false,
+            error: 'Invalid credentials. Please verify your lab username and password.',
+          };
+        }
+
+        const labData = await fetchLabProfile(authData.user.id);
+        if (!labData) {
+          return {
+            success: false,
+            error: 'Lab profile record not found. Please contact laboratory administrator.',
+          };
+        }
+
+        setSession(authData.session);
+        setUser(authData.user);
+        setLabProfile(labData);
+        setDoctorProfile(null);
+        setProfile(null);
+        setRole('LAB');
+        return { success: true, role: 'LAB' };
+      }
 
       if (rolePreference === 'DOCTOR') {
         let authEmail = '';
@@ -705,7 +862,128 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // 4. LOGOUT
+  // 4. LAB REGISTRATION
+  const registerLab = async (
+    input: LabRegistrationInput
+  ): Promise<{ success: boolean; profile?: LabProfile; error?: string }> => {
+    const cleanStaffName = input.labName.trim();
+    const cleanRegNo = input.registrationNumber.trim().toUpperCase();
+    const cleanLabName = input.laboratoryName.trim();
+    const cleanMobile = input.mobileNumber.replace(/\D/g, '');
+    const cleanUsername = input.username.trim().toLowerCase();
+    const password = input.password;
+
+    if (!cleanStaffName) return { success: false, error: 'Lab staff name is required.' };
+    if (!cleanRegNo) return { success: false, error: 'Laboratory registration number is required.' };
+    if (!cleanLabName) return { success: false, error: 'Laboratory name is required.' };
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      return { success: false, error: 'Enter a valid 10-digit Indian mobile number.' };
+    }
+    if (cleanUsername.length < 3) {
+      return { success: false, error: 'Username must be at least 3 characters long.' };
+    }
+    if (password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters long.' };
+    }
+
+    const authEmail = `${cleanUsername}@lab.healthwallet.local`;
+
+    if (!isSupabaseConfigured) {
+      const newLab: LabProfile = {
+        id: `mock-lab-${Date.now()}`,
+        user_id: `mock-lab-user-${Date.now()}`,
+        lab_name: cleanStaffName,
+        registration_number: cleanRegNo,
+        laboratory_name: cleanLabName,
+        mobile_number: cleanMobile,
+        username: cleanUsername,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const mockUser = { id: newLab.user_id, email: authEmail } as User;
+      localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'LAB');
+      localStorage.setItem(
+        LOCAL_STORAGE_LAB_SESSION_KEY,
+        JSON.stringify({ user: mockUser, profile: newLab })
+      );
+
+      return { success: true, profile: newLab };
+    }
+
+    try {
+      const { data: existingLab } = await supabase
+        .from('lab_profiles')
+        .select('id, username, registration_number, mobile_number')
+        .or(
+          `username.eq.${cleanUsername},registration_number.eq.${cleanRegNo},mobile_number.eq.${cleanMobile}`
+        )
+        .maybeSingle();
+
+      if (existingLab) {
+        if (existingLab.username?.toLowerCase() === cleanUsername) {
+          return { success: false, error: 'This username is already taken. Please choose another.' };
+        }
+        if (existingLab.registration_number?.toUpperCase() === cleanRegNo) {
+          return { success: false, error: 'This Laboratory Registration Number is already registered.' };
+        }
+        if (existingLab.mobile_number === cleanMobile) {
+          return { success: false, error: 'This mobile number is already linked to a laboratory account.' };
+        }
+      }
+
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: authEmail,
+        password,
+        options: {
+          data: {
+            username: cleanUsername,
+            lab_name: cleanStaffName,
+            registration_number: cleanRegNo,
+            laboratory_name: cleanLabName,
+            role: 'LAB',
+          },
+        },
+      });
+
+      if (signUpError || !authData.user) {
+        return {
+          success: false,
+          error: signUpError?.message || 'Failed to create laboratory authentication account.',
+        };
+      }
+
+      // Do NOT create a Health Wallet ID for Lab users!
+      const { data: insertedLab, error: insertError } = await supabase
+        .from('lab_profiles')
+        .insert({
+          user_id: authData.user.id,
+          lab_name: cleanStaffName,
+          registration_number: cleanRegNo,
+          laboratory_name: cleanLabName,
+          mobile_number: cleanMobile,
+          username: cleanUsername,
+        })
+        .select('*')
+        .single();
+
+      if (insertError || !insertedLab) {
+        return {
+          success: false,
+          error: insertError?.message || 'Failed to save lab profile to database.',
+        };
+      }
+
+      return { success: true, profile: insertedLab as LabProfile };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Unexpected error during laboratory registration.',
+      };
+    }
+  };
+
+  // 5. LOGOUT
   const logout = async () => {
     if (isSupabaseConfigured) {
       try {
@@ -716,10 +994,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
     localStorage.removeItem(LOCAL_STORAGE_DOCTOR_SESSION_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_LAB_SESSION_KEY);
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
     setUser(null);
     setProfile(null);
     setDoctorProfile(null);
+    setLabProfile(null);
     setRole(null);
     setSession(null);
   };
@@ -731,6 +1011,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         patientProfile: profile,
         doctorProfile,
+        labProfile,
         role,
         session,
         isLoading,
@@ -738,6 +1019,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         registerDoctor,
+        registerLab,
         logout,
       }}
     >

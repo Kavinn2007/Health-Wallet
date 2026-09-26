@@ -22,7 +22,11 @@ import {
 import { getDoctorAuthorizedRecords } from '../../services/consent';
 import { logMedicalRecordView } from '../../services/notifications';
 import { searchPatientByHealthWalletId } from '../../services/doctors';
-import { type MedicalRecord } from '../../services/healthRecords';
+import {
+  getMedicalRecordDetail,
+  type MedicalRecord,
+  type MedicalRecordDetail,
+} from '../../services/healthRecords';
 import { type RecordCategory, type ConsentStatus, type MinimalPatientInfo } from '../../services/supabase';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { SecondaryButton } from '../../components/ui/SecondaryButton';
@@ -44,6 +48,7 @@ export const DoctorPatientRecords: React.FC = () => {
 
   // Detailed Record Modal
   const [viewingRecord, setViewingRecord] = useState<MedicalRecord | null>(null);
+  const [recordDetail, setRecordDetail] = useState<MedicalRecordDetail | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const fetchRecords = async () => {
@@ -90,11 +95,20 @@ export const DoctorPatientRecords: React.FC = () => {
     const recheck = await getDoctorAuthorizedRecords(patientId);
     if (!recheck.success) {
       setViewingRecord(null);
+      setRecordDetail(null);
       setErrorMessage(recheck.error || 'Consent has expired or been revoked.');
       return;
     }
     // Phase 8: Log authorized medical record view
     await logMedicalRecordView(record.id, record.title);
+
+    // Fetch complete record details including structured lab results and signed document url
+    const resDetail = await getMedicalRecordDetail(
+      record.id,
+      record.record_type,
+      record.document_path
+    );
+    setRecordDetail(resDetail.data);
     setViewingRecord(record);
   };
 
@@ -361,6 +375,65 @@ export const DoctorPatientRecords: React.FC = () => {
                 </div>
               </div>
 
+              {/* Structured Lab Report Details if record_type === 'LAB_REPORT' */}
+              {viewingRecord.record_type === 'LAB_REPORT' && (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">
+                      Laboratory Findings
+                    </span>
+                    {(recordDetail?.labReport?.laboratory_name || viewingRecord.hospital_name) && (
+                      <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/60">
+                        {recordDetail?.labReport?.laboratory_name || viewingRecord.hospital_name}
+                      </span>
+                    )}
+                  </div>
+
+                  {recordDetail?.labTestResults && recordDetail.labTestResults.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                          <tr>
+                            <th className="py-2 px-2.5">Test</th>
+                            <th className="py-2 px-2">Value</th>
+                            <th className="py-2 px-2">Unit</th>
+                            <th className="py-2 px-2">Ref Range</th>
+                            <th className="py-2 px-2.5 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700 bg-white">
+                          {recordDetail.labTestResults.map((t, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/60">
+                              <td className="py-2 px-2.5 font-bold text-slate-900">{t.test_name}</td>
+                              <td className="py-2 px-2 font-bold text-slate-800">{t.value}</td>
+                              <td className="py-2 px-2 text-slate-500 font-mono text-[10px]">{t.unit || '—'}</td>
+                              <td className="py-2 px-2 font-mono text-slate-600 text-[10px]">{t.reference_range || '—'}</td>
+                              <td className="py-2 px-2.5 text-right">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                                    t.status === 'NORMAL'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                                      : t.status === 'HIGH'
+                                      ? 'bg-amber-50 text-amber-800 border border-amber-200/60'
+                                      : t.status === 'LOW'
+                                      ? 'bg-sky-50 text-sky-800 border border-sky-200/60'
+                                      : t.status === 'CRITICAL'
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                                      : 'bg-purple-50 text-purple-700 border border-purple-200/60'
+                                  }`}
+                                >
+                                  {t.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               {viewingRecord.description && (
                 <div>
                   <span className="text-slate-500 block text-[11px] mb-1 font-semibold">
@@ -376,7 +449,22 @@ export const DoctorPatientRecords: React.FC = () => {
               {viewingRecord.hospital_name && (
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2 text-slate-700">
                   <Building2 className="w-4 h-4 text-slate-400" />
-                  <span>Hospital: <strong>{viewingRecord.hospital_name}</strong></span>
+                  <span>Facility: <strong>{viewingRecord.hospital_name}</strong></span>
+                </div>
+              )}
+
+              {/* Original Document Signed URL Link */}
+              {recordDetail?.signedDocumentUrl && (
+                <div className="pt-2 border-t border-slate-100">
+                  <a
+                    href={recordDetail.signedDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold transition-all text-xs cursor-pointer shadow-xs"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Open Original Laboratory Document</span>
+                  </a>
                 </div>
               )}
             </div>

@@ -63,18 +63,34 @@ export interface Prescription {
   updated_at: string;
 }
 
+export interface LabTestResult {
+  id: string;
+  lab_report_id: string;
+  test_name: string;
+  value: string;
+  unit?: string;
+  reference_range?: string;
+  status: 'NORMAL' | 'HIGH' | 'LOW' | 'CRITICAL' | 'ABNORMAL' | 'NOT_AVAILABLE';
+  created_at: string;
+}
+
 export interface LabReport {
   id: string;
   patient_id: string;
   medical_record_id: string;
   lab_name?: string;
-  test_name: string;
+  laboratory_name?: string;
+  test_name?: string;
+  report_type?: string;
   test_date: string;
+  report_date?: string;
   result?: string;
   unit?: string;
   reference_range?: string;
   notes?: string;
   report_file_path?: string;
+  original_file_path?: string;
+  created_by_user_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -109,6 +125,7 @@ export interface MedicalRecordDetail {
   consultation?: Consultation;
   prescription?: Prescription;
   labReport?: LabReport;
+  labTestResults?: LabTestResult[];
   diagnosis?: Diagnosis;
   treatment?: Treatment;
   signedDocumentUrl?: string;
@@ -364,6 +381,7 @@ export async function getMedicalRecordDetail(
           consultation: subDetails?.consultation,
           prescription: subDetails?.prescription,
           labReport: subDetails?.labReport,
+          labTestResults: subDetails?.labTestResults || [],
           diagnosis: subDetails?.diagnosis,
           treatment: subDetails?.treatment,
           signedDocumentUrl: signedDocUrl || undefined,
@@ -411,7 +429,17 @@ export async function getMedicalRecordDetail(
         .eq('medical_record_id', recordId)
         .maybeSingle();
 
-      if (labData) detail.labReport = labData as LabReport;
+      if (labData) {
+        detail.labReport = labData as LabReport;
+        const { data: testsData } = await supabase
+          .from('lab_test_results')
+          .select('*')
+          .eq('lab_report_id', labData.id)
+          .order('created_at', { ascending: true });
+        if (testsData) {
+          detail.labTestResults = testsData as LabTestResult[];
+        }
+      }
     } else if (recordType === 'DIAGNOSIS') {
       const { data: diagData } = await supabase
         .from('diagnoses')

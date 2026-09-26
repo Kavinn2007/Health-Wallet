@@ -716,40 +716,91 @@ export const HealthRecords: React.FC = () => {
             {/* Lab Report Specific Details */}
             {recordDetail?.labReport && (
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Laboratory Test Findings
-                </h4>
-                <div className="grid grid-cols-2 gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                  <div>
-                    <span className="text-slate-500 font-semibold block">Test Name</span>
-                    <span className="font-bold text-blue-950">{recordDetail.labReport.test_name}</span>
-                  </div>
-                  {recordDetail.labReport.result && (
-                    <div>
-                      <span className="text-slate-500 font-semibold block">Observed Result</span>
-                      <span className="font-bold text-slate-900">
-                        {recordDetail.labReport.result}{' '}
-                        {recordDetail.labReport.unit ? recordDetail.labReport.unit : ''}
-                      </span>
-                    </div>
-                  )}
-                  {recordDetail.labReport.reference_range && (
-                    <div>
-                      <span className="text-slate-500 font-semibold block">Reference Range</span>
-                      <span className="font-mono text-slate-700">
-                        {recordDetail.labReport.reference_range}
-                      </span>
-                    </div>
-                  )}
-                  {recordDetail.labReport.lab_name && (
-                    <div>
-                      <span className="text-slate-500 font-semibold block">Diagnostic Center</span>
-                      <span className="font-semibold text-slate-800">
-                        {recordDetail.labReport.lab_name}
-                      </span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Laboratory Test Findings
+                  </h4>
+                  {(recordDetail.labReport.laboratory_name || recordDetail.labReport.lab_name) && (
+                    <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
+                      {recordDetail.labReport.laboratory_name || recordDetail.labReport.lab_name}
+                    </span>
                   )}
                 </div>
+
+                {recordDetail.labTestResults && recordDetail.labTestResults.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="py-2.5 px-3">Test Name</th>
+                          <th className="py-2.5 px-2">Observed Value</th>
+                          <th className="py-2.5 px-2">Unit</th>
+                          <th className="py-2.5 px-2">Reference Range</th>
+                          <th className="py-2.5 px-3 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700 bg-white">
+                        {recordDetail.labTestResults.map((t, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/60">
+                            <td className="py-2.5 px-3 font-bold text-slate-900">{t.test_name}</td>
+                            <td className="py-2.5 px-2 font-bold text-slate-800">{t.value}</td>
+                            <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px]">{t.unit || '—'}</td>
+                            <td className="py-2.5 px-2 font-mono text-slate-600 text-[11px]">{t.reference_range || '—'}</td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  t.status === 'NORMAL'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                                    : t.status === 'HIGH'
+                                    ? 'bg-amber-50 text-amber-800 border border-amber-200/60'
+                                    : t.status === 'LOW'
+                                    ? 'bg-sky-50 text-sky-800 border border-sky-200/60'
+                                    : t.status === 'CRITICAL'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                                    : 'bg-purple-50 text-purple-700 border border-purple-200/60'
+                                }`}
+                              >
+                                {t.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                    <div>
+                      <span className="text-slate-500 font-semibold block">Test Name</span>
+                      <span className="font-bold text-blue-950">{recordDetail.labReport.test_name}</span>
+                    </div>
+                    {recordDetail.labReport.result && (
+                      <div>
+                        <span className="text-slate-500 font-semibold block">Observed Result</span>
+                        <span className="font-bold text-slate-900">
+                          {recordDetail.labReport.result}{' '}
+                          {recordDetail.labReport.unit ? recordDetail.labReport.unit : ''}
+                        </span>
+                      </div>
+                    )}
+                    {recordDetail.labReport.reference_range && (
+                      <div>
+                        <span className="text-slate-500 font-semibold block">Reference Range</span>
+                        <span className="font-mono text-slate-700">
+                          {recordDetail.labReport.reference_range}
+                        </span>
+                      </div>
+                    )}
+                    {(recordDetail.labReport.lab_name || recordDetail.labReport.laboratory_name) && (
+                      <div>
+                        <span className="text-slate-500 font-semibold block">Diagnostic Center</span>
+                        <span className="font-semibold text-slate-800">
+                          {recordDetail.labReport.laboratory_name || recordDetail.labReport.lab_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

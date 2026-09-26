@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { DoctorLayout } from './components/layout/DoctorLayout';
+import { LabLayout } from './components/layout/LabLayout';
 
 // Patient Page Views
 import { Login } from './pages/Login';
@@ -31,14 +32,26 @@ import { DoctorClinicalWorkspace } from './pages/doctor/DoctorClinicalWorkspace'
 import { DoctorActivity } from './pages/doctor/DoctorActivity';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
 
+// Lab Page Views (Phase 9)
+import { LabLogin } from './pages/lab/LabLogin';
+import { LabRegister } from './pages/lab/LabRegister';
+import { LabDashboard } from './pages/lab/LabDashboard';
+import { LabPatientSearch } from './pages/lab/LabPatientSearch';
+import { LabCreateReport } from './pages/lab/LabCreateReport';
+import { LabReportDetail } from './pages/lab/LabReportDetail';
+
 export function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public Authentication Routes */}
+          {/* Public Patient & Doctor Authentication Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Public Lab Authentication Routes */}
+          <Route path="/lab/login" element={<LabLogin />} />
+          <Route path="/lab/register" element={<LabRegister />} />
 
           {/* Patient Application Shell (Role: PATIENT only) */}
           <Route element={<ProtectedRoute allowedRoles={['PATIENT']} />}>
@@ -73,6 +86,18 @@ export function App() {
               <Route path="activity" element={<DoctorActivity />} />
               <Route path="notifications" element={<Notifications isDoctor />} />
               <Route path="profile" element={<DoctorProfilePage />} />
+            </Route>
+          </Route>
+
+          {/* Lab Application Shell (Role: LAB only) */}
+          <Route path="/lab" element={<ProtectedRoute allowedRoles={['LAB']} />}>
+            <Route element={<LabLayout />}>
+              <Route index element={<Navigate to="/lab/dashboard" replace />} />
+              <Route path="dashboard" element={<LabDashboard />} />
+              <Route path="patients" element={<LabPatientSearch />} />
+              <Route path="reports/new" element={<LabCreateReport />} />
+              <Route path="reports/:id" element={<LabReportDetail />} />
+              <Route path="notifications" element={<Notifications />} />
             </Route>
           </Route>
 

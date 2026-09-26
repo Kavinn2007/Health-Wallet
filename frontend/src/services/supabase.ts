@@ -51,6 +51,27 @@ export interface DoctorRegistrationInput {
   password: string;
 }
 
+export interface LabProfile {
+  id: string;
+  user_id: string;
+  lab_name: string;
+  registration_number: string;
+  laboratory_name: string;
+  mobile_number: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LabRegistrationInput {
+  labName: string;
+  registrationNumber: string;
+  laboratoryName: string;
+  mobileNumber: string;
+  username: string;
+  password: string;
+}
+
 export interface MinimalPatientInfo {
   id: string;
   patient_name: string;

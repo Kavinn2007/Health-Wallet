@@ -11,7 +11,8 @@ export type NotificationType =
   | 'CONSULTATION_CREATED'
   | 'DIAGNOSIS_CREATED'
   | 'TREATMENT_CREATED'
-  | 'PRESCRIPTION_CREATED';
+  | 'PRESCRIPTION_CREATED'
+  | 'LAB_REPORT_CREATED';
 
 export interface AppNotification {
   id: string;

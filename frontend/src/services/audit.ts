@@ -6,6 +6,7 @@ export type AuditAction =
   | 'CREATE_DIAGNOSIS'
   | 'CREATE_TREATMENT'
   | 'CREATE_PRESCRIPTION'
+  | 'CREATE_LAB_REPORT'
   | 'REQUEST_ACCESS'
   | 'GRANT_CONSENT'
   | 'DENY_CONSENT'
@@ -15,7 +16,7 @@ export type AuditAction =
 export interface AuditLog {
   id: string;
   user_id: string;
-  role: 'PATIENT' | 'DOCTOR' | 'SYSTEM';
+  role: 'PATIENT' | 'DOCTOR' | 'LAB' | 'SYSTEM';
   patient_id?: string | null;
   action: AuditAction;
   record_type?: string | null;
@@ -95,6 +96,12 @@ export function formatPatientAuditEvent(log: AuditLog): {
         description: `${docName} created a prescription`,
         badgeColor: 'cyan',
       };
+    case 'CREATE_LAB_REPORT':
+      return {
+        title: 'Lab Report Added',
+        description: `${log.metadata?.laboratory_name || 'A laboratory'} added a new test report to your Health Wallet`,
+        badgeColor: 'teal',
+      };
     case 'EXPIRED_CONSENT':
       return {
         title: 'Consent Expired',
@@ -105,6 +112,30 @@ export function formatPatientAuditEvent(log: AuditLog): {
       return {
         title: String(log.action || '').replace(/_/g, ' '),
         description: 'Health wallet activity logged',
+        badgeColor: 'slate',
+      };
+  }
+}
+
+/**
+ * Format audit log into lab-facing activity description
+ */
+export function formatLabAuditEvent(log: AuditLog): {
+  title: string;
+  description: string;
+  badgeColor: string;
+} {
+  switch (log.action) {
+    case 'CREATE_LAB_REPORT':
+      return {
+        title: 'Lab Report Created',
+        description: `Created ${log.metadata?.report_type || 'diagnostic'} report for patient`,
+        badgeColor: 'teal',
+      };
+    default:
+      return {
+        title: String(log.action || '').replace(/_/g, ' '),
+        description: 'Laboratory action completed',
         badgeColor: 'slate',
       };
   }
