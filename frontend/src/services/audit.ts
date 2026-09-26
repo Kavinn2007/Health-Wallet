@@ -23,7 +23,12 @@ export type AuditAction =
   | 'CREATE_BLOOD_DONATION_REQUEST'
   | 'ACCEPT_BLOOD_DONATION_REQUEST'
   | 'DECLINE_BLOOD_DONATION_REQUEST'
-  | 'CANCEL_BLOOD_DONATION_REQUEST';
+  | 'CANCEL_BLOOD_DONATION_REQUEST'
+  | 'REGISTER_ORGAN_DONOR'
+  | 'UPDATE_ORGAN_DONATION_PREFERENCES'
+  | 'REVOKE_ORGAN_DONATION_CONSENT'
+  | 'REACTIVATE_ORGAN_DONOR'
+  | 'VIEW_ORGAN_DONATION_CONSENT';
 
 export interface AuditLog {
   id: string;
@@ -191,6 +196,36 @@ export function formatPatientAuditEvent(log: AuditLog): {
         title: 'Blood Donation Request Cancelled',
         description: 'You cancelled a pending blood donation request',
         badgeColor: 'rose',
+      };
+    case 'REGISTER_ORGAN_DONOR':
+      return {
+        title: 'Organ Donor Registration Recorded',
+        description: 'You recorded your voluntary organ/tissue donation intent',
+        badgeColor: 'teal',
+      };
+    case 'UPDATE_ORGAN_DONATION_PREFERENCES':
+      return {
+        title: 'Organ Donation Preferences Updated',
+        description: 'You updated your selected organ and tissue donation preferences',
+        badgeColor: 'sky',
+      };
+    case 'REVOKE_ORGAN_DONATION_CONSENT':
+      return {
+        title: 'Organ Donation Registration Revoked',
+        description: 'You withdrew your voluntary organ donation registration',
+        badgeColor: 'rose',
+      };
+    case 'REACTIVATE_ORGAN_DONOR':
+      return {
+        title: 'Organ Donor Registration Reactivated',
+        description: 'You reactivated your voluntary organ donation registration',
+        badgeColor: 'emerald',
+      };
+    case 'VIEW_ORGAN_DONATION_CONSENT':
+      return {
+        title: 'Organ Donation Consent Viewed',
+        description: 'You viewed your organ donation consent history',
+        badgeColor: 'indigo',
       };
     default:
       return {
