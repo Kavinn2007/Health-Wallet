@@ -16,7 +16,14 @@ export type AuditAction =
   | 'PHARMACY_VIEW_PRESCRIPTION'
   | 'DISPENSE_PRESCRIPTION'
   | 'PHARMACY_PARTIAL_DISPENSE'
-  | 'PHARMACY_DECLINE_PRESCRIPTION';
+  | 'PHARMACY_DECLINE_PRESCRIPTION'
+  | 'REGISTER_BLOOD_DONOR'
+  | 'UPDATE_BLOOD_DONOR_PROFILE'
+  | 'SEARCH_BLOOD_DONORS'
+  | 'CREATE_BLOOD_DONATION_REQUEST'
+  | 'ACCEPT_BLOOD_DONATION_REQUEST'
+  | 'DECLINE_BLOOD_DONATION_REQUEST'
+  | 'CANCEL_BLOOD_DONATION_REQUEST';
 
 export interface AuditLog {
   id: string;
@@ -141,6 +148,48 @@ export function formatPatientAuditEvent(log: AuditLog): {
       return {
         title: 'Prescription Not Dispensed',
         description: `${log.metadata?.pharmacy_name || 'A pharmacy'} was unable to dispense your prescription`,
+        badgeColor: 'rose',
+      };
+    case 'REGISTER_BLOOD_DONOR':
+      return {
+        title: 'Registered as Blood Donor',
+        description: `You registered as an active voluntary blood donor (${log.metadata?.blood_group || 'Blood Registry'})`,
+        badgeColor: 'rose',
+      };
+    case 'UPDATE_BLOOD_DONOR_PROFILE':
+      return {
+        title: 'Updated Blood Donor Profile',
+        description: 'You updated your voluntary blood donor preferences or availability',
+        badgeColor: 'amber',
+      };
+    case 'SEARCH_BLOOD_DONORS':
+      return {
+        title: 'Searched Blood Donors',
+        description: 'Searched for compatible voluntary blood donors',
+        badgeColor: 'sky',
+      };
+    case 'CREATE_BLOOD_DONATION_REQUEST':
+      return {
+        title: 'Blood Donation Requested',
+        description: `You sent a blood donation request for ${log.metadata?.blood_group || 'compatible group'}`,
+        badgeColor: 'rose',
+      };
+    case 'ACCEPT_BLOOD_DONATION_REQUEST':
+      return {
+        title: 'Blood Donation Request Accepted',
+        description: 'You accepted an incoming blood donation request',
+        badgeColor: 'emerald',
+      };
+    case 'DECLINE_BLOOD_DONATION_REQUEST':
+      return {
+        title: 'Blood Donation Request Declined',
+        description: 'You declined an incoming blood donation request',
+        badgeColor: 'slate',
+      };
+    case 'CANCEL_BLOOD_DONATION_REQUEST':
+      return {
+        title: 'Blood Donation Request Cancelled',
+        description: 'You cancelled a pending blood donation request',
         badgeColor: 'rose',
       };
     default:
