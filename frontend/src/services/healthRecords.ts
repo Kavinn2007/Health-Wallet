@@ -1,4 +1,9 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import {
+  supabase,
+  isSupabaseConfigured,
+  type PrescriptionDispensingRecord,
+  type PharmacyPrescriptionShare,
+} from './supabase';
 
 export type RecordType =
   | 'CONSULTATION'
@@ -129,6 +134,8 @@ export interface MedicalRecordDetail {
   diagnosis?: Diagnosis;
   treatment?: Treatment;
   signedDocumentUrl?: string;
+  dispensing?: PrescriptionDispensingRecord;
+  shares?: PharmacyPrescriptionShare[];
 }
 
 export interface CreateMedicalRecordInput {
@@ -421,7 +428,28 @@ export async function getMedicalRecordDetail(
         .eq('medical_record_id', recordId)
         .maybeSingle();
 
-      if (rxData) detail.prescription = rxData as Prescription;
+      if (rxData) {
+        detail.prescription = rxData as Prescription;
+        try {
+          const { data: dispData } = await supabase
+            .from('prescription_dispensing')
+            .select('*, pharmacy:pharmacy_profiles(pharmacy_name, pharmacist_name)')
+            .eq('prescription_id', rxData.id)
+            .order('dispensed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (dispData) detail.dispensing = dispData as any;
+
+          const { data: sharesData } = await supabase
+            .from('pharmacy_prescription_shares')
+            .select('*, pharmacy:pharmacy_profiles(pharmacy_name)')
+            .eq('prescription_id', rxData.id)
+            .order('shared_at', { ascending: false });
+          if (sharesData) detail.shares = sharesData as any;
+        } catch (e) {
+          console.warn('Could not fetch dispensing or shares:', e);
+        }
+      }
     } else if (recordType === 'LAB_REPORT') {
       const { data: labData } = await supabase
         .from('lab_reports')

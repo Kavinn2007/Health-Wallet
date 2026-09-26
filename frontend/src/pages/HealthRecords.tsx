@@ -17,7 +17,10 @@ import {
   X,
   Radio,
   FileSpreadsheet,
+  Share2,
+  Store,
 } from 'lucide-react';
+import { SharePrescriptionModal } from '../components/pharmacy/SharePrescriptionModal';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Badge } from '../components/ui/Badge';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
@@ -57,6 +60,7 @@ export const HealthRecords: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [recordDetail, setRecordDetail] = useState<MedicalRecordDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
+  const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
 
   // Add Record Form State
   const [formType, setFormType] = useState<RecordType>('CONSULTATION');
@@ -667,9 +671,39 @@ export const HealthRecords: React.FC = () => {
             {/* Prescription Specific Details */}
             {recordDetail?.prescription && (
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Prescription Details
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Prescription Details
+                    </h4>
+                    <Badge
+                      variant={
+                        recordDetail.dispensing?.status === 'DISPENSED'
+                          ? 'success'
+                          : recordDetail.dispensing?.status === 'PARTIALLY_DISPENSED'
+                          ? 'warning'
+                          : 'neutral'
+                      }
+                      size="sm"
+                    >
+                      {recordDetail.dispensing?.status === 'DISPENSED'
+                        ? 'Dispensed'
+                        : recordDetail.dispensing?.status === 'PARTIALLY_DISPENSED'
+                        ? 'Partially Dispensed'
+                        : 'Not Dispensed'}
+                    </Badge>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShareModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Share with Pharmacy</span>
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
                   <div>
                     <span className="text-slate-500 font-semibold block">Medication</span>
@@ -702,12 +736,45 @@ export const HealthRecords: React.FC = () => {
                     </div>
                   )}
                 </div>
+
                 {recordDetail.prescription.instructions && (
                   <div>
                     <span className="text-slate-400 font-semibold block mb-0.5">Instructions</span>
                     <p className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-slate-700">
                       {recordDetail.prescription.instructions}
                     </p>
+                  </div>
+                )}
+
+                {/* Dispensation History Info */}
+                {recordDetail.dispensing && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-slate-600">
+                    <span className="font-bold text-slate-800 block text-xs">Dispensation Record:</span>
+                    <p className="text-[11px]">
+                      Status: <strong className="text-slate-900">{recordDetail.dispensing.status}</strong>
+                      {recordDetail.dispensing.pharmacy?.pharmacy_name && (
+                        <span> &bull; Dispensed by {recordDetail.dispensing.pharmacy.pharmacy_name}</span>
+                      )}
+                      {recordDetail.dispensing.quantity_dispensed && (
+                        <span> &bull; Qty: {recordDetail.dispensing.quantity_dispensed}</span>
+                      )}
+                    </p>
+                    {recordDetail.dispensing.notes && (
+                      <p className="text-[11px] text-slate-500 italic">Notes: {recordDetail.dispensing.notes}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Active Shares Info */}
+                {recordDetail.shares && recordDetail.shares.length > 0 && (
+                  <div className="p-2.5 bg-sky-50/60 border border-sky-100 rounded-xl text-sky-900 text-[11px] flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Store className="w-3.5 h-3.5 text-sky-600" />
+                      Shared with: {recordDetail.shares[0].pharmacy?.pharmacy_name || 'Selected Pharmacy'}
+                    </span>
+                    <span className="font-mono text-sky-700">
+                      {recordDetail.shares[0].status}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1233,6 +1300,18 @@ export const HealthRecords: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Share with Pharmacy Modal */}
+      {selectedRecord && recordDetail?.prescription && (
+        <SharePrescriptionModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          prescriptionId={recordDetail.prescription.id}
+          medicineName={recordDetail.prescription.medicine_name}
+          dosage={recordDetail.prescription.dosage}
+          onShared={() => handleViewDetails(selectedRecord)}
+        />
+      )}
     </div>
   );
 };

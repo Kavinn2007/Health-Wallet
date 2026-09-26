@@ -72,6 +72,69 @@ export interface LabRegistrationInput {
   password: string;
 }
 
+export interface PharmacyProfile {
+  id: string;
+  user_id: string;
+  pharmacist_name: string;
+  registration_number: string;
+  pharmacy_name: string;
+  mobile_number: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PharmacyRegistrationInput {
+  pharmacistName: string;
+  registrationNumber: string;
+  pharmacyName: string;
+  mobileNumber: string;
+  username: string;
+  password: string;
+}
+
+export type PharmacyShareStatus =
+  | 'PENDING'
+  | 'ACTIVE'
+  | 'REVOKED'
+  | 'EXPIRED'
+  | 'FULFILLED'
+  | 'CANCELLED';
+
+export interface PharmacyPrescriptionShare {
+  id: string;
+  patient_id: string;
+  prescription_id: string;
+  pharmacy_id?: string | null;
+  status: PharmacyShareStatus;
+  shared_at: string;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  pharmacy?: PharmacyProfile;
+}
+
+export type DispensingStatus =
+  | 'DISPENSED'
+  | 'PARTIALLY_DISPENSED'
+  | 'NOT_DISPENSED'
+  | 'CANCELLED';
+
+export interface PrescriptionDispensingRecord {
+  id: string;
+  prescription_id: string;
+  patient_id: string;
+  pharmacy_id: string;
+  dispensed_by_user_id: string;
+  dispensed_at: string;
+  status: DispensingStatus;
+  quantity_dispensed?: string | null;
+  notes?: string | null;
+  created_at: string;
+  pharmacy?: PharmacyProfile;
+}
+
 export interface MinimalPatientInfo {
   id: string;
   patient_name: string;

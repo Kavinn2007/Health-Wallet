@@ -40,6 +40,14 @@ import { LabPatientSearch } from './pages/lab/LabPatientSearch';
 import { LabCreateReport } from './pages/lab/LabCreateReport';
 import { LabReportDetail } from './pages/lab/LabReportDetail';
 
+// Pharmacy Page Views (Phase 10)
+import { PharmacyLayout } from './components/layout/PharmacyLayout';
+import { PharmacyLogin } from './pages/pharmacy/PharmacyLogin';
+import { PharmacyRegister } from './pages/pharmacy/PharmacyRegister';
+import { PharmacyDashboard } from './pages/pharmacy/PharmacyDashboard';
+import { PharmacyPatientSearch } from './pages/pharmacy/PharmacyPatientSearch';
+import { PharmacyPrescriptions } from './pages/pharmacy/PharmacyPrescriptions';
+
 export function App() {
   return (
     <BrowserRouter>
@@ -52,6 +60,10 @@ export function App() {
           {/* Public Lab Authentication Routes */}
           <Route path="/lab/login" element={<LabLogin />} />
           <Route path="/lab/register" element={<LabRegister />} />
+
+          {/* Public Pharmacy Authentication Routes */}
+          <Route path="/pharmacy/login" element={<PharmacyLogin />} />
+          <Route path="/pharmacy/register" element={<PharmacyRegister />} />
 
           {/* Patient Application Shell (Role: PATIENT only) */}
           <Route element={<ProtectedRoute allowedRoles={['PATIENT']} />}>
@@ -97,6 +109,17 @@ export function App() {
               <Route path="patients" element={<LabPatientSearch />} />
               <Route path="reports/new" element={<LabCreateReport />} />
               <Route path="reports/:id" element={<LabReportDetail />} />
+              <Route path="notifications" element={<Notifications />} />
+            </Route>
+          </Route>
+
+          {/* Pharmacy Application Shell (Role: PHARMACY only) */}
+          <Route path="/pharmacy" element={<ProtectedRoute allowedRoles={['PHARMACY']} />}>
+            <Route element={<PharmacyLayout />}>
+              <Route index element={<Navigate to="/pharmacy/dashboard" replace />} />
+              <Route path="dashboard" element={<PharmacyDashboard />} />
+              <Route path="patients" element={<PharmacyPatientSearch />} />
+              <Route path="prescriptions" element={<PharmacyPrescriptions />} />
               <Route path="notifications" element={<Notifications />} />
             </Route>
           </Route>

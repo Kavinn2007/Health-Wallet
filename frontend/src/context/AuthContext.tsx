@@ -11,11 +11,14 @@ import {
   type DoctorRegistrationInput,
   type LabProfile,
   type LabRegistrationInput,
+  type PharmacyProfile,
+  type PharmacyRegistrationInput,
 } from '../services/supabase';
 import { DEMO_DOCTOR_PROFILE } from '../services/doctors';
 import { DEMO_LAB_PROFILE, LOCAL_STORAGE_LAB_SESSION_KEY } from '../services/lab';
+import { DEMO_PHARMACY_PROFILE } from '../services/pharmacy';
 
-export type UserRole = 'PATIENT' | 'DOCTOR' | 'LAB';
+export type UserRole = 'PATIENT' | 'DOCTOR' | 'LAB' | 'PHARMACY';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +26,7 @@ interface AuthContextType {
   patientProfile: PatientProfile | null;
   doctorProfile: DoctorProfile | null;
   labProfile: LabProfile | null;
+  pharmacyProfile: PharmacyProfile | null;
   role: UserRole | null;
   session: Session | null;
   isLoading: boolean;
@@ -41,6 +45,9 @@ interface AuthContextType {
   registerLab: (
     data: LabRegistrationInput
   ) => Promise<{ success: boolean; profile?: LabProfile; error?: string }>;
+  registerPharmacy: (
+    data: PharmacyRegistrationInput
+  ) => Promise<{ success: boolean; profile?: PharmacyProfile; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -48,6 +55,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_SESSION_KEY = 'health_wallet_v2_mock_session';
 const LOCAL_STORAGE_DOCTOR_SESSION_KEY = 'health_wallet_v2_doctor_mock_session';
+const LOCAL_STORAGE_PHARMACY_SESSION_KEY = 'health_wallet_v2_pharmacy_mock_session';
 const LOCAL_STORAGE_ROLE_KEY = 'health_wallet_v2_active_role';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -55,9 +63,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null);
   const [labProfile, setLabProfile] = useState<LabProfile | null>(null);
+  const [pharmacyProfile, setPharmacyProfile] = useState<PharmacyProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch pharmacy profile from Supabase
+  const fetchPharmacyProfile = async (userId: string): Promise<PharmacyProfile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('pharmacy_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Could not fetch pharmacy profile:', error.message);
+        return null;
+      }
+      return data as PharmacyProfile;
+    } catch (err) {
+      console.warn('Network error fetching pharmacy profile:', err);
+      return null;
+    }
+  };
 
   // Fetch lab profile from Supabase
   const fetchLabProfile = async (userId: string): Promise<LabProfile | null> => {
@@ -128,39 +157,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     patient: PatientProfile | null;
     doctor: DoctorProfile | null;
     lab: LabProfile | null;
+    pharmacy: PharmacyProfile | null;
   }> => {
+    if (roleHint === 'PHARMACY') {
+      const pharma = await fetchPharmacyProfile(userId);
+      if (pharma) return { role: 'PHARMACY', patient: null, doctor: null, lab: null, pharmacy: pharma };
+    }
+
     if (roleHint === 'LAB') {
       const lab = await fetchLabProfile(userId);
-      if (lab) return { role: 'LAB', patient: null, doctor: null, lab };
+      if (lab) return { role: 'LAB', patient: null, doctor: null, lab, pharmacy: null };
     }
 
     if (roleHint === 'DOCTOR') {
       const doc = await fetchDoctorProfile(userId);
-      if (doc) return { role: 'DOCTOR', patient: null, doctor: doc, lab: null };
+      if (doc) return { role: 'DOCTOR', patient: null, doctor: doc, lab: null, pharmacy: null };
     }
 
     if (roleHint === 'PATIENT') {
       const pat = await fetchPatientProfile(userId);
-      if (pat) return { role: 'PATIENT', patient: pat, doctor: null, lab: null };
+      if (pat) return { role: 'PATIENT', patient: pat, doctor: null, lab: null, pharmacy: null };
     }
 
-    // Check doctor first, then lab, then patient
+    // Check doctor first, then lab, then pharmacy, then patient
     const doc = await fetchDoctorProfile(userId);
     if (doc) {
-      return { role: 'DOCTOR', patient: null, doctor: doc, lab: null };
+      return { role: 'DOCTOR', patient: null, doctor: doc, lab: null, pharmacy: null };
     }
 
     const lab = await fetchLabProfile(userId);
     if (lab) {
-      return { role: 'LAB', patient: null, doctor: null, lab };
+      return { role: 'LAB', patient: null, doctor: null, lab, pharmacy: null };
+    }
+
+    const pharma = await fetchPharmacyProfile(userId);
+    if (pharma) {
+      return { role: 'PHARMACY', patient: null, doctor: null, lab: null, pharmacy: pharma };
     }
 
     const pat = await fetchPatientProfile(userId);
     if (pat) {
-      return { role: 'PATIENT', patient: pat, doctor: null, lab: null };
+      return { role: 'PATIENT', patient: pat, doctor: null, lab: null, pharmacy: null };
     }
 
-    return { role: null, patient: null, doctor: null, lab: null };
+    return { role: null, patient: null, doctor: null, lab: null, pharmacy: null };
   };
 
   // Initial session restoration on mount
@@ -177,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(initialSession);
             setUser(initialSession?.user ?? null);
             if (initialSession?.user) {
-              const { role: detectedRole, patient, doctor, lab } = await resolveUserRoleAndProfile(
+              const { role: detectedRole, patient, doctor, lab, pharmacy } = await resolveUserRoleAndProfile(
                 initialSession.user.id
               );
               if (isMounted) {
@@ -185,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setProfile(patient);
                 setDoctorProfile(doctor);
                 setLabProfile(lab);
+                setPharmacyProfile(pharmacy);
               }
             }
           }
@@ -195,7 +236,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fallback demo session from localStorage for testing when Supabase env is pending
         try {
           const activeRole = localStorage.getItem(LOCAL_STORAGE_ROLE_KEY) as UserRole | null;
-          if (activeRole === 'LAB') {
+          if (activeRole === 'PHARMACY') {
+            const pharmaStored = localStorage.getItem(LOCAL_STORAGE_PHARMACY_SESSION_KEY);
+            if (pharmaStored && isMounted) {
+              const parsed = JSON.parse(pharmaStored);
+              setPharmacyProfile(parsed.profile);
+              setUser(parsed.user);
+              setRole('PHARMACY');
+              setProfile(null);
+              setDoctorProfile(null);
+              setLabProfile(null);
+            }
+          } else if (activeRole === 'LAB') {
             const labStored = localStorage.getItem(LOCAL_STORAGE_LAB_SESSION_KEY);
             if (labStored && isMounted) {
               const parsed = JSON.parse(labStored);
@@ -204,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setRole('LAB');
               setProfile(null);
               setDoctorProfile(null);
+              setPharmacyProfile(null);
             }
           } else if (activeRole === 'DOCTOR') {
             const docStored = localStorage.getItem(LOCAL_STORAGE_DOCTOR_SESSION_KEY);
@@ -214,6 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setRole('DOCTOR');
               setProfile(null);
               setLabProfile(null);
+              setPharmacyProfile(null);
             }
           } else {
             const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
@@ -224,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setRole('PATIENT');
               setDoctorProfile(null);
               setLabProfile(null);
+              setPharmacyProfile(null);
             }
           }
         } catch (e) {
@@ -248,7 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          const { role: detectedRole, patient, doctor, lab } = await resolveUserRoleAndProfile(
+          const { role: detectedRole, patient, doctor, lab, pharmacy } = await resolveUserRoleAndProfile(
             newSession.user.id
           );
           if (isMounted) {
@@ -256,6 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(patient);
             setDoctorProfile(doctor);
             setLabProfile(lab);
+            setPharmacyProfile(pharmacy);
           }
         } else {
           if (isMounted) {
@@ -263,6 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(null);
             setDoctorProfile(null);
             setLabProfile(null);
+            setPharmacyProfile(null);
           }
         }
       });
@@ -290,6 +347,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!isSupabaseConfigured) {
       // Demo / offline fallback simulation
+      if (rolePreference === 'PHARMACY') {
+        const storedPharma = localStorage.getItem(LOCAL_STORAGE_PHARMACY_SESSION_KEY);
+        if (storedPharma) {
+          try {
+            const parsed = JSON.parse(storedPharma);
+            if (
+              (parsed.profile.username.toLowerCase() === cleanId.toLowerCase() ||
+                parsed.profile.mobile_number === cleanId) &&
+              password.length >= 6
+            ) {
+              setPharmacyProfile(parsed.profile);
+              setUser(parsed.user);
+              setProfile(null);
+              setDoctorProfile(null);
+              setLabProfile(null);
+              setRole('PHARMACY');
+              localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'PHARMACY');
+              return { success: true, role: 'PHARMACY' };
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // Allow pre-seeded demo pharmacy: apollo_wellness_4482 / 9876543211
+        if (cleanId.toLowerCase() === 'apollo_wellness_4482' || cleanId === '9876543211') {
+          const demoPharma = DEMO_PHARMACY_PROFILE;
+          const mockUser = {
+            id: demoPharma.user_id,
+            email: 'apollo_wellness_4482@pharmacy.healthwallet.local',
+          } as User;
+          setPharmacyProfile(demoPharma);
+          setDoctorProfile(null);
+          setLabProfile(null);
+          setProfile(null);
+          setUser(mockUser);
+          setRole('PHARMACY');
+          localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'PHARMACY');
+          localStorage.setItem(
+            LOCAL_STORAGE_PHARMACY_SESSION_KEY,
+            JSON.stringify({ user: mockUser, profile: demoPharma })
+          );
+          return { success: true, role: 'PHARMACY' };
+        }
+
+        return {
+          success: false,
+          error:
+            'Pharmacy account not found in demo mode. Use username "apollo_wellness_4482" (password: any) or register a new pharmacy account.',
+        };
+      }
+
       if (rolePreference === 'LAB') {
         const storedLab = localStorage.getItem(LOCAL_STORAGE_LAB_SESSION_KEY);
         if (storedLab) {
@@ -453,6 +562,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const isMobile = /^[6-9]\d{9}$/.test(cleanId);
+
+      if (rolePreference === 'PHARMACY') {
+        let authEmail = '';
+        if (isMobile) {
+          const { data: pharmaMatch } = await supabase
+            .from('pharmacy_profiles')
+            .select('username')
+            .eq('mobile_number', cleanId)
+            .maybeSingle();
+
+          if (!pharmaMatch?.username) {
+            return {
+              success: false,
+              error: 'No pharmacy account found with this mobile number. Please register first.',
+            };
+          }
+          authEmail = `${pharmaMatch.username.toLowerCase()}@pharmacy.healthwallet.local`;
+        } else {
+          authEmail = `${cleanId.toLowerCase()}@pharmacy.healthwallet.local`;
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password,
+        });
+
+        if (authError || !authData.user) {
+          return {
+            success: false,
+            error: 'Invalid credentials. Please verify your pharmacy username and password.',
+          };
+        }
+
+        const pharmaData = await fetchPharmacyProfile(authData.user.id);
+        if (!pharmaData) {
+          return {
+            success: false,
+            error: 'Pharmacy profile record not found. Please contact administration.',
+          };
+        }
+
+        setSession(authData.session);
+        setUser(authData.user);
+        setPharmacyProfile(pharmaData);
+        setLabProfile(null);
+        setDoctorProfile(null);
+        setProfile(null);
+        setRole('PHARMACY');
+        return { success: true, role: 'PHARMACY' };
+      }
 
       if (rolePreference === 'LAB') {
         let authEmail = '';
@@ -983,6 +1142,127 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // 4c. REGISTER PHARMACY
+  const registerPharmacy = async (
+    data: PharmacyRegistrationInput
+  ): Promise<{ success: boolean; profile?: PharmacyProfile; error?: string }> => {
+    const cleanStaffName = data.pharmacistName.trim();
+    const cleanRegNo = data.registrationNumber.trim().toUpperCase();
+    const cleanPharmacyName = data.pharmacyName.trim();
+    const cleanMobile = data.mobileNumber.replace(/\D/g, '');
+    const cleanUsername = data.username.trim().toLowerCase();
+    const password = data.password;
+
+    if (!cleanStaffName) return { success: false, error: 'Pharmacist name is required.' };
+    if (!cleanRegNo) return { success: false, error: 'Pharmacy registration number is required.' };
+    if (!cleanPharmacyName) return { success: false, error: 'Pharmacy name is required.' };
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      return { success: false, error: 'Enter a valid 10-digit Indian mobile number.' };
+    }
+    if (cleanUsername.length < 3) {
+      return { success: false, error: 'Username must be at least 3 characters long.' };
+    }
+    if (password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters long.' };
+    }
+
+    const authEmail = `${cleanUsername}@pharmacy.healthwallet.local`;
+
+    if (!isSupabaseConfigured) {
+      const newPharma: PharmacyProfile = {
+        id: `mock-pharma-${Date.now()}`,
+        user_id: `mock-pharma-user-${Date.now()}`,
+        pharmacist_name: cleanStaffName,
+        registration_number: cleanRegNo,
+        pharmacy_name: cleanPharmacyName,
+        mobile_number: cleanMobile,
+        username: cleanUsername,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const mockUser = { id: newPharma.user_id, email: authEmail } as User;
+      localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, 'PHARMACY');
+      localStorage.setItem(
+        LOCAL_STORAGE_PHARMACY_SESSION_KEY,
+        JSON.stringify({ user: mockUser, profile: newPharma })
+      );
+
+      return { success: true, profile: newPharma };
+    }
+
+    try {
+      const { data: existingPharma } = await supabase
+        .from('pharmacy_profiles')
+        .select('id, username, registration_number, mobile_number')
+        .or(
+          `username.eq.${cleanUsername},registration_number.eq.${cleanRegNo},mobile_number.eq.${cleanMobile}`
+        )
+        .maybeSingle();
+
+      if (existingPharma) {
+        if (existingPharma.username?.toLowerCase() === cleanUsername) {
+          return { success: false, error: 'This username is already taken. Please choose another.' };
+        }
+        if (existingPharma.registration_number?.toUpperCase() === cleanRegNo) {
+          return { success: false, error: 'This Pharmacy Registration Number is already registered.' };
+        }
+        if (existingPharma.mobile_number === cleanMobile) {
+          return { success: false, error: 'This mobile number is already linked to a pharmacy account.' };
+        }
+      }
+
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: authEmail,
+        password,
+        options: {
+          data: {
+            username: cleanUsername,
+            pharmacist_name: cleanStaffName,
+            registration_number: cleanRegNo,
+            pharmacy_name: cleanPharmacyName,
+            role: 'PHARMACY',
+          },
+        },
+      });
+
+      if (signUpError || !authData.user) {
+        return {
+          success: false,
+          error: signUpError?.message || 'Failed to create pharmacy authentication account.',
+        };
+      }
+
+      // Do NOT create a Health Wallet ID for Pharmacy users!
+      const { data: insertedPharma, error: insertError } = await supabase
+        .from('pharmacy_profiles')
+        .insert({
+          user_id: authData.user.id,
+          pharmacist_name: cleanStaffName,
+          registration_number: cleanRegNo,
+          pharmacy_name: cleanPharmacyName,
+          mobile_number: cleanMobile,
+          username: cleanUsername,
+        })
+        .select('*')
+        .single();
+
+      if (insertError || !insertedPharma) {
+        return {
+          success: false,
+          error: insertError?.message || 'Failed to save pharmacy profile to database.',
+        };
+      }
+
+      return { success: true, profile: insertedPharma as PharmacyProfile };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Unexpected error during pharmacy registration.',
+      };
+    }
+  };
+
   // 5. LOGOUT
   const logout = async () => {
     if (isSupabaseConfigured) {
@@ -995,11 +1275,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
     localStorage.removeItem(LOCAL_STORAGE_DOCTOR_SESSION_KEY);
     localStorage.removeItem(LOCAL_STORAGE_LAB_SESSION_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_PHARMACY_SESSION_KEY);
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
     setUser(null);
     setProfile(null);
     setDoctorProfile(null);
     setLabProfile(null);
+    setPharmacyProfile(null);
     setRole(null);
     setSession(null);
   };
@@ -1012,6 +1294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         patientProfile: profile,
         doctorProfile,
         labProfile,
+        pharmacyProfile,
         role,
         session,
         isLoading,
@@ -1020,6 +1303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         registerDoctor,
         registerLab,
+        registerPharmacy,
         logout,
       }}
     >

@@ -11,12 +11,17 @@ export type AuditAction =
   | 'GRANT_CONSENT'
   | 'DENY_CONSENT'
   | 'REVOKE_CONSENT'
-  | 'EXPIRED_CONSENT';
+  | 'EXPIRED_CONSENT'
+  | 'SHARE_PRESCRIPTION'
+  | 'PHARMACY_VIEW_PRESCRIPTION'
+  | 'DISPENSE_PRESCRIPTION'
+  | 'PHARMACY_PARTIAL_DISPENSE'
+  | 'PHARMACY_DECLINE_PRESCRIPTION';
 
 export interface AuditLog {
   id: string;
   user_id: string;
-  role: 'PATIENT' | 'DOCTOR' | 'LAB' | 'SYSTEM';
+  role: 'PATIENT' | 'DOCTOR' | 'LAB' | 'PHARMACY' | 'SYSTEM';
   patient_id?: string | null;
   action: AuditAction;
   record_type?: string | null;
@@ -108,10 +113,82 @@ export function formatPatientAuditEvent(log: AuditLog): {
         description: `A previously granted access consent has reached its expiry limit`,
         badgeColor: 'slate',
       };
+    case 'SHARE_PRESCRIPTION':
+      return {
+        title: 'Prescription Shared',
+        description: `You shared a prescription with ${log.metadata?.pharmacy_name || 'a pharmacy'}`,
+        badgeColor: 'sky',
+      };
+    case 'PHARMACY_VIEW_PRESCRIPTION':
+      return {
+        title: 'Prescription Viewed by Pharmacy',
+        description: `${log.metadata?.pharmacy_name || 'A pharmacy'} viewed your authorized prescription`,
+        badgeColor: 'indigo',
+      };
+    case 'DISPENSE_PRESCRIPTION':
+      return {
+        title: 'Prescription Dispensed',
+        description: `${log.metadata?.pharmacy_name || 'A pharmacy'} marked your prescription as dispensed`,
+        badgeColor: 'emerald',
+      };
+    case 'PHARMACY_PARTIAL_DISPENSE':
+      return {
+        title: 'Prescription Partially Dispensed',
+        description: `${log.metadata?.pharmacy_name || 'A pharmacy'} partially dispensed your prescription`,
+        badgeColor: 'amber',
+      };
+    case 'PHARMACY_DECLINE_PRESCRIPTION':
+      return {
+        title: 'Prescription Not Dispensed',
+        description: `${log.metadata?.pharmacy_name || 'A pharmacy'} was unable to dispense your prescription`,
+        badgeColor: 'rose',
+      };
     default:
       return {
         title: String(log.action || '').replace(/_/g, ' '),
         description: 'Health wallet activity logged',
+        badgeColor: 'slate',
+      };
+  }
+}
+
+/**
+ * Format audit log into pharmacy-facing activity description
+ */
+export function formatPharmacyAuditEvent(log: AuditLog): {
+  title: string;
+  description: string;
+  badgeColor: string;
+} {
+  switch (log.action) {
+    case 'PHARMACY_VIEW_PRESCRIPTION':
+      return {
+        title: 'Prescription Viewed',
+        description: 'Viewed authorized patient prescription for dispensing',
+        badgeColor: 'indigo',
+      };
+    case 'DISPENSE_PRESCRIPTION':
+      return {
+        title: 'Prescription Dispensed',
+        description: 'Successfully dispensed prescribed medication',
+        badgeColor: 'emerald',
+      };
+    case 'PHARMACY_PARTIAL_DISPENSE':
+      return {
+        title: 'Partially Dispensed',
+        description: 'Partially dispensed prescribed medication',
+        badgeColor: 'amber',
+      };
+    case 'PHARMACY_DECLINE_PRESCRIPTION':
+      return {
+        title: 'Prescription Declined',
+        description: 'Marked prescription as not dispensed',
+        badgeColor: 'rose',
+      };
+    default:
+      return {
+        title: String(log.action || '').replace(/_/g, ' '),
+        description: 'Pharmacy action completed',
         badgeColor: 'slate',
       };
   }
@@ -270,6 +347,45 @@ export async function getDoctorActivityHistory(): Promise<AuditLog[]> {
     return (data as AuditLog[]) || [];
   } catch (err: any) {
     console.warn('Unexpected error fetching doctor activity logs:', err?.message);
+    return [];
+  }
+}
+
+/**
+ * Retrieve pharmacy's own activity history
+ */
+export async function getPharmacyActivityHistory(): Promise<AuditLog[]> {
+  if (!isSupabaseConfigured) {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_AUDIT_LOGS_KEY);
+      const logs: AuditLog[] = stored ? JSON.parse(stored) : [];
+      return logs
+        .filter((l) => l.role === 'PHARMACY')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } catch {
+      return [];
+    }
+  }
+
+  try {
+    const { data: userAuth } = await supabase.auth.getUser();
+    if (!userAuth.user) return [];
+
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('user_id', userAuth.user.id)
+      .eq('role', 'PHARMACY')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Error fetching pharmacy activity logs:', error.message);
+      return [];
+    }
+
+    return (data as AuditLog[]) || [];
+  } catch (err: any) {
+    console.warn('Unexpected error fetching pharmacy activity logs:', err?.message);
     return [];
   }
 }
