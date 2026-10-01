@@ -177,6 +177,293 @@ function initSchema(db) {
       created_at TEXT NOT NULL
     );
   `);
+
+  // 8. Hospitals Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS hospitals (
+      id TEXT PRIMARY KEY,
+      hospital_name TEXT NOT NULL,
+      hospital_code TEXT UNIQUE NOT NULL,
+      state_code TEXT NOT NULL,
+      state_name TEXT NOT NULL,
+      city TEXT NOT NULL,
+      district TEXT,
+      address TEXT,
+      pincode TEXT,
+      phone_number TEXT,
+      emergency_available INTEGER DEFAULT 0,
+      blood_bank_available INTEGER DEFAULT 0,
+      verified INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      is_seed INTEGER DEFAULT 1,
+      latitude REAL,
+      longitude REAL,
+      website TEXT,
+      emergency_contact TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  seedHospitals(db);
+}
+
+function seedHospitals(db) {
+  const count = db.prepare('SELECT count(*) as c FROM hospitals').get();
+  if (count && count.c > 0) return;
+
+  const seedData = [
+    {
+      id: 'a1000000-0000-0000-0000-000000000001',
+      hospital_name: 'Salem Government Mohan Kumaramangalam Medical College Hospital',
+      hospital_code: 'HOSP-TN-SLM-001',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Salem',
+      district: 'Salem',
+      address: 'Fort Main Road, Near Collectorate',
+      pincode: '636001',
+      phone_number: '+91 427 288 2200',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.6643,
+      longitude: 78.146,
+      website: 'https://gmkmc.ac.in',
+      emergency_contact: '+91 427 288 2211',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000002',
+      hospital_name: 'Manipal Hospital Salem',
+      hospital_code: 'HOSP-TN-SLM-002',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Salem',
+      district: 'Salem',
+      address: 'Dalmia Board, Bangalore Highway',
+      pincode: '636012',
+      phone_number: '+91 427 234 6666',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.6912,
+      longitude: 78.1215,
+      website: 'https://manipalhospitals.com/salem',
+      emergency_contact: '+91 427 234 6699',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000003',
+      hospital_name: 'Sri Gokulam Hospital',
+      hospital_code: 'HOSP-TN-SLM-003',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Salem',
+      district: 'Salem',
+      address: '3/60, Meyyanur Main Road',
+      pincode: '636004',
+      phone_number: '+91 427 244 8171',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.6621,
+      longitude: 78.1348,
+      website: 'https://gokulamhospital.com',
+      emergency_contact: '+91 427 244 8179',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000004',
+      hospital_name: 'SKS Hospital & Post Graduate Medical Institute',
+      hospital_code: 'HOSP-TN-SLM-004',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Salem',
+      district: 'Salem',
+      address: '23, SKS Hospital Road, Fairlands',
+      pincode: '636016',
+      phone_number: '+91 427 404 1000',
+      emergency_available: 1,
+      blood_bank_available: 0,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.6738,
+      longitude: 78.1442,
+      website: 'https://skshospital.com',
+      emergency_contact: '+91 427 404 1010',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000005',
+      hospital_name: 'ABC Multi-Speciality Hospital',
+      hospital_code: 'HOSP-TN-CBE-001',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Coimbatore',
+      district: 'Coimbatore',
+      address: '142, Avinashi Road, Peelamedu',
+      pincode: '641004',
+      phone_number: '+91 422 257 0170',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.0264,
+      longitude: 76.9972,
+      website: 'https://abchospital.medimind.org',
+      emergency_contact: '+91 422 257 0199',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000006',
+      hospital_name: 'PSG Hospitals',
+      hospital_code: 'HOSP-TN-CBE-002',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Coimbatore',
+      district: 'Coimbatore',
+      address: 'Avinashi Road, Peelamedu',
+      pincode: '641004',
+      phone_number: '+91 422 257 0170',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.028,
+      longitude: 77.001,
+      website: 'https://psghospitals.com',
+      emergency_contact: '+91 422 434 5000',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000007',
+      hospital_name: 'Ganga Hospital',
+      hospital_code: 'HOSP-TN-CBE-003',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Coimbatore',
+      district: 'Coimbatore',
+      address: '313, Mettupalayam Road, Saibaba Colony',
+      pincode: '641043',
+      phone_number: '+91 422 248 5000',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.0205,
+      longitude: 76.953,
+      website: 'https://gangahospital.com',
+      emergency_contact: '+91 422 248 5011',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000008',
+      hospital_name: 'Sri Ramakrishna Hospital',
+      hospital_code: 'HOSP-TN-CBE-004',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Coimbatore',
+      district: 'Coimbatore',
+      address: '395, Sarojini Naidu Road, Sidhapudur',
+      pincode: '641044',
+      phone_number: '+91 422 450 0000',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 11.0145,
+      longitude: 76.9782,
+      website: 'https://sriramakrishnahospital.com',
+      emergency_contact: '+91 422 450 0108',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000010',
+      hospital_name: 'Rajiv Gandhi Government General Hospital',
+      hospital_code: 'HOSP-TN-MAA-001',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Chennai',
+      district: 'Chennai',
+      address: 'EVR Periyar Salai, Park Town',
+      pincode: '600003',
+      phone_number: '+91 44 2530 5000',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 13.0805,
+      longitude: 80.2778,
+      website: 'https://rggh.tn.gov.in',
+      emergency_contact: '+91 44 2530 5108',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000024',
+      hospital_name: 'Victoria Hospital Bangalore',
+      hospital_code: 'HOSP-KA-BLR-001',
+      state_code: 'Karnataka',
+      state_name: 'Karnataka',
+      city: 'Bangalore',
+      district: 'Bangalore Urban',
+      address: 'Fort Road, Near City Market',
+      pincode: '560002',
+      phone_number: '+91 80 2670 1150',
+      emergency_available: 1,
+      blood_bank_available: 1,
+      verified: 1,
+      active: 1,
+      is_seed: 1,
+      latitude: 12.9629,
+      longitude: 77.5753,
+      website: 'https://victoriahospital.karnataka.gov.in',
+      emergency_contact: '+91 80 2670 1155',
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000029',
+      hospital_name: 'Salem Orthopaedic Care Center',
+      hospital_code: 'HOSP-TN-SLM-099',
+      state_code: 'Tamil Nadu',
+      state_name: 'Tamil Nadu',
+      city: 'Salem',
+      district: 'Salem',
+      address: '99, Junction Main Road',
+      pincode: '636005',
+      phone_number: '+91 427 999 0000',
+      emergency_available: 0,
+      blood_bank_available: 0,
+      verified: 0,
+      active: 0,
+      is_seed: 1,
+    }
+  ];
+
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO hospitals (
+      id, hospital_name, hospital_code, state_code, state_name, city, district,
+      address, pincode, phone_number, emergency_available, blood_bank_available,
+      verified, active, is_seed, latitude, longitude, website, emergency_contact,
+      created_at, updated_at
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?, ?,
+      ?, ?
+    )
+  `);
+
+  const now = new Date().toISOString();
+  seedData.forEach(h => {
+    insert.run(
+      h.id, h.hospital_name, h.hospital_code, h.state_code, h.state_name, h.city, h.district,
+      h.address, h.pincode, h.phone_number, h.emergency_available, h.blood_bank_available,
+      h.verified, h.active, h.is_seed, h.latitude || null, h.longitude || null, h.website || null, h.emergency_contact || null,
+      now, now
+    );
+  });
 }
 
 /**
@@ -1110,6 +1397,43 @@ export async function handleDbRequest(req, res, pathname, query) {
 
       const inserted = db.prepare('SELECT * FROM audit_logs WHERE id = ?').get(logId);
       sendJson(201, inserted);
+      return true;
+    }
+  }
+
+  // Route: /api/db/hospitals
+  if (pathname === '/api/db/hospitals') {
+    if (req.method === 'GET') {
+      const state = query.get('state');
+      const city = query.get('city');
+      const verifiedOnly = query.get('verified_only') === 'true';
+      const bloodBankOnly = query.get('blood_bank_only') === 'true';
+      const emergencyOnly = query.get('emergency_only') === 'true';
+
+      let sql = 'SELECT * FROM hospitals WHERE active = 1';
+      const params = [];
+
+      if (state) {
+        sql += ' AND (LOWER(state_name) = LOWER(?) OR LOWER(state_code) = LOWER(?))';
+        params.push(state.trim(), state.trim());
+      }
+      if (city) {
+        sql += ' AND LOWER(city) = LOWER(?)';
+        params.push(city.trim());
+      }
+      if (verifiedOnly) {
+        sql += ' AND verified = 1';
+      }
+      if (bloodBankOnly) {
+        sql += ' AND blood_bank_available = 1';
+      }
+      if (emergencyOnly) {
+        sql += ' AND emergency_available = 1';
+      }
+
+      sql += ' ORDER BY city ASC, hospital_name ASC';
+      const hospitals = db.prepare(sql).all(...params);
+      sendJson(200, hospitals);
       return true;
     }
   }
