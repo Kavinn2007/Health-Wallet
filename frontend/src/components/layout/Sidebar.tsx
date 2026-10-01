@@ -17,6 +17,8 @@ import {
   KeyRound,
   History,
   Bell,
+  Calendar,
+  ShieldCheck,
 } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -33,6 +35,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose, isMobile = false }) =
       to: '/dashboard',
       label: 'Overview',
       icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+    {
+      to: '/wallet-summary',
+      label: 'Wallet Summary',
+      icon: <ShieldCheck className="w-4 h-4" />,
+      badge: 'Unified',
+      badgeVariant: 'sky',
     },
     {
       to: '/health-records',
@@ -56,6 +65,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose, isMobile = false }) =
       to: '/access-history',
       label: 'Access History',
       icon: <History className="w-4 h-4" />,
+    },
+    {
+      to: '/appointments',
+      label: 'Appointments',
+      icon: <Calendar className="w-4 h-4" />,
     },
     {
       to: '/notifications',

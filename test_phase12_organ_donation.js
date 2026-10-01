@@ -502,7 +502,7 @@ function getMyOrganConsentHistoryRPC(callerUserId) {
   if (!patient) return [];
   return mockOrganDonationConsents
     .filter((c) => c.patient_id === patient.id)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    .sort((a, b) => (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || (mockOrganDonationConsents.indexOf(b) - mockOrganDonationConsents.indexOf(a)));
 }
 
 // -------------------------------------------------------------

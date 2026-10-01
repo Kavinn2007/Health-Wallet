@@ -28,12 +28,35 @@ export type AuditAction =
   | 'UPDATE_ORGAN_DONATION_PREFERENCES'
   | 'REVOKE_ORGAN_DONATION_CONSENT'
   | 'REACTIVATE_ORGAN_DONOR'
-  | 'VIEW_ORGAN_DONATION_CONSENT';
+  | 'VIEW_ORGAN_DONATION_CONSENT'
+  | 'APPOINTMENT_BOOKED'
+  | 'APPOINTMENT_CONFIRMED'
+  | 'APPOINTMENT_CANCELLED'
+  | 'APPOINTMENT_RESCHEDULED'
+  | 'APPOINTMENT_COMPLETED'
+  | 'APPOINTMENT_EXPIRED'
+  | 'VIEW_WALLET_SUMMARY'
+  | 'CREATE_EMERGENCY_BLOOD_REQUEST'
+  | 'EMERGENCY_BLOOD_NOTIFICATION_SENT'
+  | 'EMERGENCY_BLOOD_HELP_RESPONSE'
+  | 'EMERGENCY_BLOOD_CALL_RESPONSE'
+  | 'EMERGENCY_BLOOD_VERIFICATION_STARTED'
+  | 'EMERGENCY_BLOOD_DONOR_VERIFIED'
+  | 'EMERGENCY_BLOOD_DONOR_REJECTED'
+  | 'EMERGENCY_BLOOD_REQUEST_PARTIALLY_FULFILLED'
+  | 'EMERGENCY_BLOOD_REQUEST_FULFILLED'
+  | 'EMERGENCY_BLOOD_REQUEST_CANCELLED'
+  | 'EMERGENCY_BLOOD_REQUEST_EXPIRED'
+  | 'CREATE_HOSPITAL'
+  | 'UPDATE_HOSPITAL'
+  | 'VERIFY_HOSPITAL'
+  | 'UPDATE_HOSPITAL_EMERGENCY_STATUS'
+  | 'UPDATE_HOSPITAL_BLOOD_BANK_STATUS';
 
 export interface AuditLog {
   id: string;
   user_id: string;
-  role: 'PATIENT' | 'DOCTOR' | 'LAB' | 'PHARMACY' | 'SYSTEM';
+  role: 'PATIENT' | 'DOCTOR' | 'LAB' | 'PHARMACY' | 'ADMIN' | 'SYSTEM';
   patient_id?: string | null;
   action: AuditAction;
   record_type?: string | null;
@@ -227,6 +250,114 @@ export function formatPatientAuditEvent(log: AuditLog): {
         description: 'You viewed your organ donation consent history',
         badgeColor: 'indigo',
       };
+    case 'APPOINTMENT_BOOKED':
+      return {
+        title: 'Appointment Booked',
+        description: `You booked an appointment with ${docName}`,
+        badgeColor: 'sky',
+      };
+    case 'APPOINTMENT_CONFIRMED':
+      return {
+        title: 'Appointment Confirmed',
+        description: `${docName} confirmed your scheduled appointment`,
+        badgeColor: 'emerald',
+      };
+    case 'APPOINTMENT_CANCELLED':
+      return {
+        title: 'Appointment Cancelled',
+        description: `Appointment was cancelled${log.reason ? `: ${log.reason}` : ''}`,
+        badgeColor: 'rose',
+      };
+    case 'APPOINTMENT_RESCHEDULED':
+      return {
+        title: 'Appointment Rescheduled',
+        description: `Appointment was rescheduled to a new time slot`,
+        badgeColor: 'amber',
+      };
+    case 'APPOINTMENT_COMPLETED':
+      return {
+        title: 'Appointment Completed',
+        description: `${docName} marked your appointment as completed`,
+        badgeColor: 'teal',
+      };
+    case 'APPOINTMENT_EXPIRED':
+      return {
+        title: 'Appointment Expired',
+        description: `Pending appointment request expired`,
+        badgeColor: 'slate',
+      };
+    case 'VIEW_WALLET_SUMMARY':
+      return {
+        title: 'Wallet Summary Viewed',
+        description: 'You viewed your consolidated Health Wallet Summary',
+        badgeColor: 'sky',
+      };
+    case 'CREATE_EMERGENCY_BLOOD_REQUEST':
+      return {
+        title: 'Emergency Blood Requirement Created',
+        description: `Emergency blood requirement initiated for ${log.metadata?.blood_group || 'blood'} (${log.metadata?.request_code || ''})`,
+        badgeColor: 'rose',
+      };
+    case 'EMERGENCY_BLOOD_NOTIFICATION_SENT':
+      return {
+        title: 'Emergency Blood Alert Received',
+        description: `Received urgent emergency blood requirement alert (${log.metadata?.request_code || ''})`,
+        badgeColor: 'rose',
+      };
+    case 'EMERGENCY_BLOOD_HELP_RESPONSE':
+      return {
+        title: 'Responded: Willing to Help',
+        description: `Offered willingness to assist for emergency blood request ${log.metadata?.request_code || ''}`,
+        badgeColor: 'emerald',
+      };
+    case 'EMERGENCY_BLOOD_CALL_RESPONSE':
+      return {
+        title: 'Emergency AI Call Response',
+        description: `Recorded call response (${log.metadata?.status || 'Responded'}) for emergency ${log.metadata?.request_code || ''}`,
+        badgeColor: 'indigo',
+      };
+    case 'EMERGENCY_BLOOD_VERIFICATION_STARTED':
+      return {
+        title: 'Emergency Verification Submitted',
+        description: `Submitted donor readiness for emergency request ${log.metadata?.request_code || ''}`,
+        badgeColor: 'amber',
+      };
+    case 'EMERGENCY_BLOOD_DONOR_VERIFIED':
+      return {
+        title: 'Emergency Response Verified',
+        description: `Authorized hospital verified your emergency response for ${log.metadata?.request_code || ''}`,
+        badgeColor: 'emerald',
+      };
+    case 'EMERGENCY_BLOOD_DONOR_REJECTED':
+      return {
+        title: 'Emergency Response Status Updated',
+        description: `Hospital updated status for emergency ${log.metadata?.request_code || ''}`,
+        badgeColor: 'slate',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_PARTIALLY_FULFILLED':
+      return {
+        title: 'Emergency Blood Request Partially Fulfilled',
+        description: `Emergency request ${log.metadata?.request_code || ''} reached partial fulfillment`,
+        badgeColor: 'teal',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_FULFILLED':
+      return {
+        title: 'Emergency Blood Request Fulfilled',
+        description: `Emergency request ${log.metadata?.request_code || ''} successfully fulfilled`,
+        badgeColor: 'emerald',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_CANCELLED':
+      return {
+        title: 'Emergency Blood Request Cancelled',
+        description: `Emergency request ${log.metadata?.request_code || ''} was cancelled`,
+        badgeColor: 'rose',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_EXPIRED':
+      return {
+        title: 'Emergency Blood Request Expired',
+        description: `Emergency request ${log.metadata?.request_code || ''} timed out`,
+        badgeColor: 'slate',
+      };
     default:
       return {
         title: String(log.action || '').replace(/_/g, ' '),
@@ -354,6 +485,42 @@ export function formatDoctorAuditEvent(log: AuditLog): {
         title: 'Consent Expired',
         description: 'Patient consent reached its scheduled duration limit',
         badgeColor: 'amber',
+      };
+    case 'CREATE_EMERGENCY_BLOOD_REQUEST':
+      return {
+        title: 'Created Emergency Blood Request',
+        description: `Created emergency request for ${log.metadata?.blood_group || 'blood'} (${log.metadata?.request_code || ''})`,
+        badgeColor: 'rose',
+      };
+    case 'EMERGENCY_BLOOD_DONOR_VERIFIED':
+      return {
+        title: 'Verified Emergency Donor',
+        description: `Verified donor availability and compatibility for request ${log.metadata?.request_code || ''}`,
+        badgeColor: 'emerald',
+      };
+    case 'EMERGENCY_BLOOD_DONOR_REJECTED':
+      return {
+        title: 'Rejected Emergency Donor Response',
+        description: `Marked donor response as ineligible or unavailable for ${log.metadata?.request_code || ''}`,
+        badgeColor: 'slate',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_PARTIALLY_FULFILLED':
+      return {
+        title: 'Updated Request: Partially Fulfilled',
+        description: `Marked emergency request ${log.metadata?.request_code || ''} as partially fulfilled`,
+        badgeColor: 'teal',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_FULFILLED':
+      return {
+        title: 'Fulfilled Emergency Blood Request',
+        description: `Closed emergency request ${log.metadata?.request_code || ''} as fully fulfilled`,
+        badgeColor: 'emerald',
+      };
+    case 'EMERGENCY_BLOOD_REQUEST_CANCELLED':
+      return {
+        title: 'Cancelled Emergency Blood Request',
+        description: `Cancelled emergency request ${log.metadata?.request_code || ''}`,
+        badgeColor: 'rose',
       };
     default:
       return {

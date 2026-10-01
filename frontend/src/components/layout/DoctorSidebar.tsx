@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Activity,
   Bell,
+  Calendar,
+  Droplet,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +49,16 @@ export const DoctorSidebar: React.FC<DoctorSidebarProps> = ({ onClose, isMobile 
       to: '/doctor/access-requests',
       label: 'Access Requests',
       icon: <KeyRound className="w-4 h-4" />,
+    },
+    {
+      to: '/doctor/appointments',
+      label: 'Appointments',
+      icon: <Calendar className="w-4 h-4" />,
+    },
+    {
+      to: '/doctor/emergency-blood',
+      label: 'Emergency Blood',
+      icon: <Droplet className="w-4 h-4 text-rose-500" />,
     },
     {
       to: '/doctor/activity',

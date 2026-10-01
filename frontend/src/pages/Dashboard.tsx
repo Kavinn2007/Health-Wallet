@@ -13,6 +13,7 @@ import {
   Plus,
   ArrowRight,
   Calendar,
+  ShieldCheck,
 } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
 import { HealthCard } from '../components/ui/HealthCard';
@@ -26,13 +27,15 @@ import {
   type MedicalRecord,
 } from '../services/healthRecords';
 import { getPatientAccessRequests } from '../services/consent';
-import { KeyRound, Stethoscope } from 'lucide-react';
+import { listActiveEmergencyRequestsForDonor } from '../services/emergencyBlood';
+import { KeyRound, Stethoscope, AlertCircle } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { profile } = useAuth();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState<boolean>(true);
   const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+  const [emergencyCount, setEmergencyCount] = useState<number>(0);
 
   const patientName = profile?.patient_name || 'Verified Patient';
   const healthWalletId = profile?.health_wallet_id || 'HW-TN-XXXXXXXX';
@@ -52,14 +55,16 @@ export const Dashboard: React.FC = () => {
         return;
       }
       try {
-        const [recordsRes, reqs] = await Promise.all([
+        const [recordsRes, reqs, emrReqs] = await Promise.all([
           getPatientMedicalRecords(profile.id),
           getPatientAccessRequests(profile.id),
+          listActiveEmergencyRequestsForDonor(),
         ]);
         if (isMounted) {
           if (recordsRes.data) setRecords(recordsRes.data);
           const pending = reqs.filter((r) => r.status === 'PENDING').length;
           setPendingRequestsCount(pending);
+          setEmergencyCount(emrReqs ? emrReqs.length : 0);
         }
       } catch (err) {
         console.warn('Dashboard records fetch error:', err);
@@ -120,14 +125,23 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 lg:self-center">
-            <Link to="/scan-report">
+            <Link to="/wallet-summary">
               <PrimaryButton
                 size="md"
-                className="w-full sm:w-auto bg-sky-500 hover:bg-sky-400 shadow-md"
+                className="w-full sm:w-auto bg-sky-500 hover:bg-sky-400 shadow-md font-bold"
+                icon={<ShieldCheck className="w-4 h-4" />}
+              >
+                Unified Wallet
+              </PrimaryButton>
+            </Link>
+            <Link to="/scan-report">
+              <SecondaryButton
+                size="md"
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border-white/20"
                 icon={<ScanLine className="w-4 h-4" />}
               >
-                Scan Medical Report
-              </PrimaryButton>
+                Scan Report
+              </SecondaryButton>
             </Link>
             <Link to="/offline-wallet">
               <SecondaryButton
@@ -144,6 +158,33 @@ export const Dashboard: React.FC = () => {
         {/* Subtle background decorative shapes */}
         <div className="absolute right-0 -bottom-10 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* Emergency Blood Network Alert Banner */}
+      {emergencyCount > 0 && (
+        <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
+              <AlertCircle className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-rose-950">🚨 URGENT: Emergency Blood Requirement</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-200 text-rose-900">
+                  {emergencyCount} Active Alert{emergencyCount > 1 ? 's' : ''}
+                </span>
+              </div>
+              <p className="text-xs text-rose-800 mt-0.5">
+                Hospital emergency departments in your region require compatible blood donors immediately.
+              </p>
+            </div>
+          </div>
+          <Link to="/blood-donation">
+            <PrimaryButton size="sm" className="bg-rose-600 hover:bg-rose-700 text-white font-bold" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+              Respond: I CAN HELP
+            </PrimaryButton>
+          </Link>
+        </div>
+      )}
 
       {/* Doctor Access Requests Notification Card */}
       {pendingRequestsCount > 0 ? (

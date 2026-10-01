@@ -22,6 +22,8 @@ import { Emergency } from './pages/Emergency';
 import { OfflineWallet } from './pages/OfflineWallet';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+import { Appointments } from './pages/Appointments';
+import { WalletSummary } from './pages/WalletSummary';
 
 // Doctor Page Views (Phase 5, 6, 7 & 8)
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
@@ -31,6 +33,8 @@ import { DoctorPatientRecords } from './pages/doctor/DoctorPatientRecords';
 import { DoctorClinicalWorkspace } from './pages/doctor/DoctorClinicalWorkspace';
 import { DoctorActivity } from './pages/doctor/DoctorActivity';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
+import { DoctorAppointments } from './pages/doctor/DoctorAppointments';
+import { DoctorEmergencyBlood } from './pages/doctor/DoctorEmergencyBlood';
 
 // Lab Page Views (Phase 9)
 import { LabLogin } from './pages/lab/LabLogin';
@@ -70,10 +74,12 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/wallet-summary" element={<WalletSummary />} />
               <Route path="/health-records" element={<HealthRecords />} />
               <Route path="/scan-report" element={<ScanReport />} />
               <Route path="/access-requests" element={<PatientAccessRequests />} />
               <Route path="/access-history" element={<AccessHistory />} />
+              <Route path="/appointments" element={<Appointments />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/medicines" element={<Medicines />} />
               <Route path="/family" element={<Family />} />
@@ -95,6 +101,8 @@ export function App() {
               <Route path="patients/:patientId/records" element={<DoctorPatientRecords />} />
               <Route path="patients/:patientId/clinical" element={<DoctorClinicalWorkspace />} />
               <Route path="access-requests" element={<DoctorAccessRequests />} />
+              <Route path="appointments" element={<DoctorAppointments />} />
+              <Route path="emergency-blood" element={<DoctorEmergencyBlood />} />
               <Route path="activity" element={<DoctorActivity />} />
               <Route path="notifications" element={<Notifications isDoctor />} />
               <Route path="profile" element={<DoctorProfilePage />} />
